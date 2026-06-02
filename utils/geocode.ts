@@ -64,3 +64,21 @@ export async function geocodePlaces(
   results.sort((a, b) => distanceSq(a, prox) - distanceSq(b, prox))
   return results
 }
+
+// Reverse-geocode coordinates to a human-readable address. Used as a fallback
+// for listings that don't have a stored address.
+export async function reverseGeocode(
+  lng: number,
+  lat: number,
+  token: string
+): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${token}&types=address&limit=1`
+    )
+    const json = await res.json()
+    return json.features?.[0]?.place_name ?? null
+  } catch {
+    return null
+  }
+}

@@ -56,7 +56,11 @@ export default function PostLeasePanel({
       setPrice(String(listing.price))
       setSize(String(listing.size))
       setMoveInDate(listing.move_in_date)
-      setLocation({ lng: listing.lng, lat: listing.lat, name: 'Saved location' })
+      setLocation({
+        lng: listing.lng,
+        lat: listing.lat,
+        name: listing.address ?? '',
+      })
       setExistingImages(listing.images ?? [])
     } else {
       setTitle('')
@@ -132,6 +136,7 @@ export default function PostLeasePanel({
         lat: location.lat,
         lng: location.lng,
         move_in_date: moveInDate,
+        address: location.name || null,
         images,
       }
 
@@ -204,9 +209,9 @@ export default function PostLeasePanel({
             />
             {location && (
               <p className="mt-2 text-xs text-gray-500">
-                {isEditing && location.name === 'Saved location'
-                  ? 'Using the saved location. Search above to change it.'
-                  : `Selected: ${location.name}`}
+                {location.name
+                  ? `Selected: ${location.name}`
+                  : 'Using the saved location. Search above to set the address.'}
               </p>
             )}
           </section>

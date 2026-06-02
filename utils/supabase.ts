@@ -40,6 +40,7 @@ export interface Listing {
   lat: number
   lng: number
   move_in_date: string
+  address?: string
   images?: string[]
   created_at: string
   user?: User

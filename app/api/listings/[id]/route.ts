@@ -26,6 +26,7 @@ export async function PATCH(
     if (body.lat !== undefined) updates.lat = parseFloat(body.lat)
     if (body.lng !== undefined) updates.lng = parseFloat(body.lng)
     if (body.move_in_date !== undefined) updates.move_in_date = body.move_in_date
+    if (body.address !== undefined) updates.address = body.address || null
     if (body.images !== undefined) {
       updates.images = Array.isArray(body.images) ? body.images : []
     }

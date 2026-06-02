@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import {
   X,
+  MapPin,
   Ruler,
   Calendar,
   Mail,
@@ -11,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/app/providers'
 import { Listing } from '@/utils/supabase'
+import ListingAddress from './ListingAddress'
 
 interface ListingDetailPanelProps {
   listing: Listing | null
@@ -135,6 +137,14 @@ export default function ListingDetailPanel({
                 ${listing.price}
               </span>
               <span className="text-gray-500">/month</span>
+            </div>
+
+            {/* Address */}
+            <div className="flex items-start gap-2 text-sm text-gray-700">
+              <MapPin size={16} className="text-gray-400 shrink-0 mt-0.5" />
+              <span>
+                <ListingAddress listing={listing} />
+              </span>
             </div>
 
             {/* Stats */}

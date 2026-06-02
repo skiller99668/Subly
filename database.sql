@@ -29,13 +29,15 @@ CREATE TABLE IF NOT EXISTS public.listings (
   lat DOUBLE PRECISION NOT NULL,
   lng DOUBLE PRECISION NOT NULL,
   move_in_date DATE NOT NULL,
+  address TEXT,
   images TEXT[] DEFAULT '{}',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Image URLs column (idempotent — safe to run on an existing database).
+-- Image URLs + human-readable address columns (idempotent).
 ALTER TABLE public.listings ADD COLUMN IF NOT EXISTS images TEXT[] DEFAULT '{}';
+ALTER TABLE public.listings ADD COLUMN IF NOT EXISTS address TEXT;
 
 -- Create messages table
 CREATE TABLE IF NOT EXISTS public.messages (
