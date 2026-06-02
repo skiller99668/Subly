@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import AuthProvider from './providers'
 
 export const metadata: Metadata = {
   title: 'Subly - Find a Sublease Near McGill',
@@ -13,7 +14,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-white">{children}</body>
+      <body className="bg-white">
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   )
 }

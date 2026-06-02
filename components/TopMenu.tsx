@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useSession, signIn, signOut } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import {
   Search,
   Sliders,
@@ -45,6 +47,8 @@ interface Filters {
 
 export default function TopMenu() {
   const menuRef = useRef<HTMLDivElement>(null)
+  const { data: session } = useSession()
+  const router = useRouter()
   const [menu, setMenu] = useState<MenuState>({
     searchOpen: false,
     filtersOpen: false,
@@ -96,6 +100,15 @@ export default function TopMenu() {
       moveInDateEnd: '',
       sortBy: 'newest',
     })
+  }
+
+  const handlePostLease = () => {
+    if (!session) {
+      router.push('/auth')
+    } else {
+      // TODO: Open post listing modal/page
+      alert('Post listing feature coming soon!')
+    }
   }
 
   // Handle click outside to close menus
@@ -425,43 +438,58 @@ export default function TopMenu() {
             </button>
 
             {/* Post a Lease Button */}
-            <button className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition flex items-center gap-2 font-medium">
+            <button 
+              onClick={handlePostLease}
+              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition flex items-center gap-2 font-medium"
+            >
               <Plus size={20} /> Post a Lease
             </button>
 
-            {/* Account Menu */}
-            <div className="relative">
+            {/* Login/Account Button */}
+            {!session ? (
               <button
-                onClick={() => toggleMenu('accountMenuOpen')}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
-                title="Account"
+                onClick={() => signIn()}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-medium"
               >
-                <Menu size={20} className="text-gray-700" />
+                Sign In
               </button>
-              {menu.accountMenuOpen && (
-                <div className="absolute top-12 right-0 w-56 bg-white border border-gray-200 rounded-lg shadow-lg p-2">
-                  <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded">
-                    👤 My Profile
-                  </button>
-                  <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded">
-                    📋 My Listings
-                  </button>
-                  <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded">
-                    ❤️ Saved Searches
-                  </button>
-                  <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded">
-                    ⚙️ Settings
-                  </button>
-                  <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded">
-                    ❓ Help & Support
-                  </button>
-                  <hr className="my-2" />
-                  <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded text-red-600">
-                    🚪 Logout
-                  </button>
-                </div>
-              )}
-            </div>
+            ) : (
+              <div className="relative">
+                <button
+                  onClick={() => toggleMenu('accountMenuOpen')}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition"
+                  title="Account"
+                >
+                  <Menu size={20} className="text-gray-700" />
+                </button>
+                {menu.accountMenuOpen && (
+                  <div className="absolute top-12 right-0 w-56 bg-white border border-gray-200 rounded-lg shadow-lg p-2">
+                    <div className="px-4 py-2 text-sm font-semibold text-gray-700 border-b mb-2">
+                      👤 {session.user?.name}
+                    </div>
+                    <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded">
+                      📋 My Listings
+                    </button>
+                    <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded">
+                      ❤️ Saved Searches
+                    </button>
+                    <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded">
+                      ⚙️ Settings
+                    </button>
+                    <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded">
+                      ❓ Help & Support
+                    </button>
+                    <hr className="my-2" />
+                    <button 
+                      onClick={() => signOut({ callbackUrl: "/" })}
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded text-red-600"
+                    >
+                      🚪 Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
