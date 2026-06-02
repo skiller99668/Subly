@@ -1,0 +1,102 @@
+<!--
+  Subly — "Confirm signup" email template.
+
+  Paste this into the Supabase dashboard:
+    Authentication → Email Templates → Confirm signup → Message body (HTML).
+  Suggested Subject: Verify your email for Subly
+
+  The button/link uses the token_hash verification flow handled by
+  app/auth/confirm/route.ts. Keep the {{ .SiteURL }} and {{ .TokenHash }}
+  template variables intact.
+
+  Built with table layout + inline styles for email-client compatibility
+  (Gmail, Outlook, Apple Mail). Gradients are unreliable in email, so the
+  header uses a solid indigo (#4f46e5) to match the Subly wordmark.
+-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light only" />
+    <title>Verify your email for Subly</title>
+  </head>
+  <body style="margin:0; padding:0; background-color:#eef2ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <!-- Preheader (hidden preview text) -->
+    <div style="display:none; max-height:0; overflow:hidden; opacity:0;">
+      Confirm your email to start finding subleases near McGill.
+    </div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#eef2ff;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <!-- Card -->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px; background-color:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 4px 24px rgba(79,70,229,0.12);">
+
+            <!-- Header -->
+            <tr>
+              <td align="center" style="background-color:#4f46e5; padding:36px 24px;">
+                <div style="font-size:34px; font-weight:800; color:#ffffff; letter-spacing:-0.5px;">Subly</div>
+                <div style="font-size:14px; color:#c7d2fe; margin-top:6px;">Find a sublease near McGill</div>
+              </td>
+            </tr>
+
+            <!-- Body -->
+            <tr>
+              <td style="padding:36px 32px 8px 32px;">
+                <h1 style="margin:0 0 16px 0; font-size:22px; font-weight:700; color:#1f2937;">Confirm your email</h1>
+                <p style="margin:0 0 24px 0; font-size:15px; line-height:1.6; color:#4b5563;">
+                  Thanks for signing up! Tap the button below to verify your email address and activate your Subly account.
+                </p>
+
+                <!-- CTA button -->
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 28px 0;">
+                  <tr>
+                    <td align="center" bgcolor="#4f46e5" style="border-radius:10px;">
+                      <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup"
+                         style="display:inline-block; padding:14px 32px; font-size:16px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:10px;">
+                        Verify my email
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+
+                <p style="margin:0 0 8px 0; font-size:13px; line-height:1.6; color:#6b7280;">
+                  Or paste this link into your browser:
+                </p>
+                <p style="margin:0 0 24px 0; font-size:13px; line-height:1.6; word-break:break-all;">
+                  <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup" style="color:#4f46e5;">{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup</a>
+                </p>
+              </td>
+            </tr>
+
+            <!-- Divider -->
+            <tr>
+              <td style="padding:0 32px;">
+                <div style="border-top:1px solid #e5e7eb;"></div>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td style="padding:20px 32px 32px 32px;">
+                <p style="margin:0; font-size:12px; line-height:1.6; color:#9ca3af;">
+                  If you didn't create a Subly account, you can safely ignore this email — no account will be created without confirmation.
+                </p>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Outside-card footer -->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
+            <tr>
+              <td align="center" style="padding:20px 16px 0 16px;">
+                <p style="margin:0; font-size:12px; color:#9ca3af;">© Subly · Montreal · Near McGill University</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

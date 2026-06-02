@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { useSession, signIn, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/app/providers'
+import { geocodePlaces, GeoResult } from '@/utils/geocode'
 import {
   Search,
   Sliders,
@@ -20,7 +21,6 @@ import {
   Calendar,
   DollarSign,
   Ruler,
-  Star,
 } from 'lucide-react'
 
 interface MenuState {
@@ -45,9 +45,31 @@ interface Filters {
   sortBy: 'newest' | 'price-low' | 'price-high' | 'distance' | 'rating'
 }
 
-export default function TopMenu() {
+interface TopMenuProps {
+  onLocationSelect?: (
+    lng: number,
+    lat: number,
+    name: string,
+    zoom?: number,
+    dropPin?: boolean
+  ) => void
+  onPostLease?: () => void
+  onMyListings?: () => void
+  // Returns the current map center so suggestions can be sorted by proximity.
+  getProximity?: () => { lng: number; lat: number } | undefined
+}
+
+const RECENTS_KEY = 'subly.recentSearches'
+const MAX_RECENTS = 6
+
+export default function TopMenu({
+  onLocationSelect,
+  onPostLease,
+  onMyListings,
+  getProximity,
+}: TopMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
-  const { data: session } = useSession()
+  const { user, signOut } = useAuth()
   const router = useRouter()
   const [menu, setMenu] = useState<MenuState>({
     searchOpen: false,
@@ -72,9 +94,78 @@ export default function TopMenu() {
   })
 
   const [searchQuery, setSearchQuery] = useState('')
-  const [compareCount, setCompareCount] = useState(0)
-  const [unreadMessages, setUnreadMessages] = useState(3)
-  const [notifications, setNotifications] = useState(2)
+  const [searchResults, setSearchResults] = useState<GeoResult[]>([])
+  const [searching, setSearching] = useState(false)
+  const [recentSearches, setRecentSearches] = useState<GeoResult[]>([])
+
+  // Load recent searches from localStorage on mount.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(RECENTS_KEY)
+      if (raw) setRecentSearches(JSON.parse(raw))
+    } catch {
+      // ignore malformed storage
+    }
+  }, [])
+  // Placeholder counters until compare/messages/notifications are wired up.
+  const [compareCount] = useState(0)
+  const [unreadMessages] = useState(3)
+  const [notifications] = useState(2)
+
+  // Debounced Mapbox geocoding for the "find subleases in <place>" search.
+  useEffect(() => {
+    const q = searchQuery.trim()
+    if (q.length < 3) {
+      setSearchResults([])
+      return
+    }
+    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+    if (!token) return
+
+    setSearching(true)
+    const timer = setTimeout(async () => {
+      try {
+        setSearchResults(await geocodePlaces(q, token, getProximity?.()))
+      } catch {
+        setSearchResults([])
+      } finally {
+        setSearching(false)
+      }
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  const persistRecents = (next: GeoResult[]) => {
+    setRecentSearches(next)
+    try {
+      localStorage.setItem(RECENTS_KEY, JSON.stringify(next))
+    } catch {
+      // ignore storage failures (private mode, quota, etc.)
+    }
+  }
+
+  const removeRecent = (name: string) => {
+    persistRecents(recentSearches.filter((r) => r.name !== name))
+  }
+
+  const clearRecents = () => persistRecents([])
+
+  const selectLocation = (result: GeoResult) => {
+    onLocationSelect?.(
+      result.lng,
+      result.lat,
+      result.name,
+      result.zoom,
+      result.isAddress
+    )
+    // Move this search to the front of the recents list (deduped, capped).
+    const deduped = recentSearches.filter((r) => r.name !== result.name)
+    persistRecents([result, ...deduped].slice(0, MAX_RECENTS))
+    setSearchQuery('')
+    setSearchResults([])
+    setMenu((prev) => ({ ...prev, searchOpen: false }))
+  }
 
   const toggleMenu = (key: keyof MenuState) => {
     setMenu((prev) => ({
@@ -103,11 +194,10 @@ export default function TopMenu() {
   }
 
   const handlePostLease = () => {
-    if (!session) {
+    if (!user) {
       router.push('/auth')
     } else {
-      // TODO: Open post listing modal/page
-      alert('Post listing feature coming soon!')
+      onPostLease?.()
     }
   }
 
@@ -153,22 +243,72 @@ export default function TopMenu() {
                 <div className="absolute top-12 left-0 w-80 bg-white border border-gray-200 rounded-lg shadow-lg p-4">
                   <input
                     type="text"
-                    placeholder="Search addresses, neighborhoods..."
+                    placeholder="Find subleases in a city or area..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    autoFocus
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <div className="mt-3 space-y-2 max-h-48 overflow-y-auto">
-                    <div className="text-sm text-gray-600 p-2 hover:bg-gray-50 rounded cursor-pointer">
-                      📍 McGill University, Montreal
+
+                  {searchQuery.trim().length >= 3 ? (
+                    /* Live geocoding results */
+                    <div className="mt-3 space-y-1 max-h-48 overflow-y-auto">
+                      {searching && (
+                        <div className="text-sm text-gray-400 p-2">Searching…</div>
+                      )}
+                      {!searching && searchResults.length === 0 && (
+                        <div className="text-sm text-gray-400 p-2">No matches found</div>
+                      )}
+                      {searchResults.map((result, i) => (
+                        <button
+                          key={`${result.lng},${result.lat},${i}`}
+                          onClick={() => selectLocation(result)}
+                          className="w-full text-left text-sm text-gray-600 p-2 hover:bg-gray-50 rounded"
+                        >
+                          📍 {result.name}
+                        </button>
+                      ))}
                     </div>
-                    <div className="text-sm text-gray-600 p-2 hover:bg-gray-50 rounded cursor-pointer">
-                      📍 Downtown Montreal
-                    </div>
-                    <div className="text-sm text-gray-600 p-2 hover:bg-gray-50 rounded cursor-pointer">
-                      📍 Plateau Mont-Royal
-                    </div>
-                  </div>
+                  ) : (
+                    /* Recent searches */
+                    recentSearches.length > 0 && (
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between px-1 mb-1">
+                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                            Recent
+                          </span>
+                          <button
+                            onClick={clearRecents}
+                            className="text-xs text-gray-400 hover:text-red-500 transition"
+                          >
+                            Clear all
+                          </button>
+                        </div>
+                        <div className="space-y-1 max-h-48 overflow-y-auto">
+                          {recentSearches.map((result, i) => (
+                            <div
+                              key={`${result.lng},${result.lat},${i}`}
+                              className="group flex items-center rounded hover:bg-gray-50"
+                            >
+                              <button
+                                onClick={() => selectLocation(result)}
+                                className="flex-1 text-left text-sm text-gray-600 p-2 truncate"
+                              >
+                                🕘 {result.name}
+                              </button>
+                              <button
+                                onClick={() => removeRecent(result.name)}
+                                aria-label={`Remove ${result.name}`}
+                                className="opacity-0 group-hover:opacity-100 p-2 text-gray-400 hover:text-red-500 transition"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  )}
                 </div>
               )}
             </div>
@@ -446,9 +586,9 @@ export default function TopMenu() {
             </button>
 
             {/* Login/Account Button */}
-            {!session ? (
+            {!user ? (
               <button
-                onClick={() => signIn()}
+                onClick={() => router.push('/auth')}
                 className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-medium"
               >
                 Sign In
@@ -465,9 +605,17 @@ export default function TopMenu() {
                 {menu.accountMenuOpen && (
                   <div className="absolute top-12 right-0 w-56 bg-white border border-gray-200 rounded-lg shadow-lg p-2">
                     <div className="px-4 py-2 text-sm font-semibold text-gray-700 border-b mb-2">
-                      👤 {session.user?.name}
+                      👤 {user.user_metadata?.username ||
+                        user.user_metadata?.name ||
+                        user.email}
                     </div>
-                    <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded">
+                    <button
+                      onClick={() => {
+                        onMyListings?.()
+                        setMenu((prev) => ({ ...prev, accountMenuOpen: false }))
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded"
+                    >
                       📋 My Listings
                     </button>
                     <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded">
@@ -480,8 +628,12 @@ export default function TopMenu() {
                       ❓ Help & Support
                     </button>
                     <hr className="my-2" />
-                    <button 
-                      onClick={() => signOut({ callbackUrl: "/" })}
+                    <button
+                      onClick={async () => {
+                        await signOut()
+                        router.push("/")
+                        router.refresh()
+                      }}
                       className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded text-red-600"
                     >
                       🚪 Logout

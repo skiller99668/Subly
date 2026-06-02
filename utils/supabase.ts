@@ -1,9 +1,20 @@
-import { createClient } from "@supabase/supabase-js"
+import { createBrowserClient } from "@supabase/auth-helpers-nextjs"
+import type { SupabaseClient } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+// Lazily-created, cookie-based browser client (a singleton per tab). Cookie
+// storage is what lets server route handlers read the same session. Created
+// lazily so importing the types below from server code never instantiates it.
+let browserClient: SupabaseClient | undefined
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export function getSupabaseBrowserClient(): SupabaseClient {
+  if (!browserClient) {
+    browserClient = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+  }
+  return browserClient
+}
 
 // Type definitions for database tables
 export interface User {
@@ -13,6 +24,9 @@ export interface User {
   name: string
   avatar_url?: string
   bio?: string
+  location_name?: string
+  location_lat?: number
+  location_lng?: number
   created_at: string
 }
 
@@ -26,6 +40,7 @@ export interface Listing {
   lat: number
   lng: number
   move_in_date: string
+  images?: string[]
   created_at: string
   user?: User
 }
