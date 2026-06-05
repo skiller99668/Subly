@@ -11,6 +11,7 @@ import {
   User as UserIcon,
   ChevronLeft,
   ChevronRight,
+  Heart,
 } from 'lucide-react'
 import { useAuth } from '@/app/providers'
 import { Listing } from '@/utils/supabase'
@@ -19,11 +20,15 @@ import ListingAddress from './ListingAddress'
 interface ListingDetailPanelProps {
   listing: Listing | null
   onClose: () => void
+  isFavorited?: boolean
+  onToggleFavorite?: (listingId: string) => void
 }
 
 export default function ListingDetailPanel({
   listing,
   onClose,
+  isFavorited = false,
+  onToggleFavorite,
 }: ListingDetailPanelProps) {
   const { user } = useAuth()
   const [activeImage, setActiveImage] = useState(0)
@@ -83,13 +88,31 @@ export default function ListingDetailPanel({
           <h2 className="text-lg font-bold text-gray-800 truncate pr-4">
             {listing.title}
           </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition shrink-0"
-            aria-label="Close"
-          >
-            <X size={20} className="text-gray-600" />
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            {/* Save / favorite (signed-in users only) */}
+            {user && (
+              <button
+                onClick={() => onToggleFavorite?.(listing.id)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition"
+                aria-label={isFavorited ? 'Remove from saved' : 'Save listing'}
+                title={isFavorited ? 'Remove from saved' : 'Save listing'}
+              >
+                <Heart
+                  size={20}
+                  className={
+                    isFavorited ? 'text-red-500 fill-red-500' : 'text-gray-600'
+                  }
+                />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg transition"
+              aria-label="Close"
+            >
+              <X size={20} className="text-gray-600" />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto">

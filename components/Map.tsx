@@ -9,6 +9,7 @@ import TopMenu from './TopMenu'
 import PostLeasePanel from './PostLeasePanel'
 import ListingDetailPanel from './ListingDetailPanel'
 import MyListingsPanel from './MyListingsPanel'
+import SavedListingsPanel from './SavedListingsPanel'
 import MessagesPanel from './MessagesPanel'
 import AreaListingsPanel from './AreaListingsPanel'
 import LocationListingsPanel, { ListingGroup } from './LocationListingsPanel'
@@ -63,6 +64,10 @@ export default function MapComponent() {
   const [myListingsOpen, setMyListingsOpen] = useState(false)
   const [messagesOpen, setMessagesOpen] = useState(false)
   const [unreadTotal, setUnreadTotal] = useState(0)
+  // Favorited listing IDs, the "favorites only" map filter, and saved panel.
+  const [favorites, setFavorites] = useState<Set<string>>(new Set())
+  const [favoritesOnly, setFavoritesOnly] = useState(false)
+  const [savedOpen, setSavedOpen] = useState(false)
   // When a pin holding several listings is clicked, show the group panel.
   const [selectedGroup, setSelectedGroup] = useState<ListingGroup | null>(null)
   // Current viewport bounds + zoom, used to compute clusters.
@@ -91,6 +96,14 @@ export default function MapComponent() {
     ? listings.filter((l) => l.user_id === user.id)
     : []
 
+  // The user's favorited listings, for the "Saved" panel.
+  const savedListings = listings.filter((l) => favorites.has(l.id))
+
+  // Listings shown on the map — all, or only favorites when the filter is on.
+  const visibleListings = favoritesOnly
+    ? listings.filter((l) => favorites.has(l.id))
+    : listings
+
   // Listings near the searched place, nearest first, for the left panel.
   const areaListings = useMemo(() => {
     if (!areaSearch) return []
@@ -117,7 +130,7 @@ export default function MapComponent() {
       maxZoom: 22,
     })
     index.load(
-      listings.map((listing) => ({
+      visibleListings.map((listing) => ({
         type: 'Feature' as const,
         properties: { listing },
         geometry: {
@@ -127,7 +140,7 @@ export default function MapComponent() {
       }))
     )
     return index
-  }, [listings])
+  }, [visibleListings])
 
   // The clusters/points visible in the current viewport.
   const clusters = useMemo(() => {
@@ -175,6 +188,49 @@ export default function MapComponent() {
   useEffect(() => {
     fetchListings()
   }, [fetchListings])
+
+  // Load the user's favorited listing IDs.
+  const fetchFavorites = useCallback(async () => {
+    if (!user) {
+      setFavorites(new Set())
+      return
+    }
+    const { data } = await supabase
+      .from('favorites')
+      .select('listing_id')
+      .eq('user_id', user.id)
+    setFavorites(new Set((data ?? []).map((f) => f.listing_id as string)))
+  }, [user, supabase])
+
+  useEffect(() => {
+    fetchFavorites()
+  }, [fetchFavorites])
+
+  // Add/remove a favorite (optimistic), requires sign-in.
+  const toggleFavorite = useCallback(
+    async (listingId: string) => {
+      if (!user) return
+      const isFav = favorites.has(listingId)
+      setFavorites((prev) => {
+        const next = new Set(prev)
+        if (isFav) next.delete(listingId)
+        else next.add(listingId)
+        return next
+      })
+      if (isFav) {
+        await supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('listing_id', listingId)
+      } else {
+        await supabase
+          .from('favorites')
+          .insert({ user_id: user.id, listing_id: listingId })
+      }
+    },
+    [user, favorites, supabase]
+  )
 
   // Total unread messages, for the top-menu badge.
   const refreshUnread = useCallback(async () => {
@@ -332,6 +388,9 @@ export default function MapComponent() {
         }}
         onMyListings={() => setMyListingsOpen(true)}
         onMessages={() => setMessagesOpen(true)}
+        onSavedSearches={() => setSavedOpen(true)}
+        onToggleFavoritesOnly={() => setFavoritesOnly((v) => !v)}
+        favoritesOnly={favoritesOnly}
         onSearchClose={() => {
           // Keep the pin if a search result panel is open; clear stray pins otherwise.
           if (!areaSearch) setSearchedPin(null)
@@ -490,6 +549,16 @@ export default function MapComponent() {
       <ListingDetailPanel
         listing={detailListing}
         onClose={() => setDetailListing(null)}
+        isFavorited={detailListing ? favorites.has(detailListing.id) : false}
+        onToggleFavorite={toggleFavorite}
+      />
+
+      <SavedListingsPanel
+        open={savedOpen}
+        onClose={() => setSavedOpen(false)}
+        listings={savedListings}
+        onSelect={(listing) => setDetailListing(listing)}
+        onToggleFavorite={toggleFavorite}
       />
 
       <MessagesPanel

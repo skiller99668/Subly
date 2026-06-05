@@ -57,6 +57,9 @@ interface TopMenuProps {
   onMyListings?: () => void
   onMessages?: () => void
   onSearchClose?: () => void
+  onSavedSearches?: () => void
+  onToggleFavoritesOnly?: () => void
+  favoritesOnly?: boolean
   unreadCount?: number
   // Returns the current map center so suggestions can be sorted by proximity.
   getProximity?: () => { lng: number; lat: number } | undefined
@@ -71,6 +74,9 @@ export default function TopMenu({
   onMyListings,
   onMessages,
   onSearchClose,
+  onSavedSearches,
+  onToggleFavoritesOnly,
+  favoritesOnly = false,
   unreadCount = 0,
   getProximity,
 }: TopMenuProps) {
@@ -515,15 +521,15 @@ export default function TopMenu({
 
             {/* Favorites */}
             <button
-              onClick={() => toggleMenu('showFavoritesOnly')}
+              onClick={() => onToggleFavoritesOnly?.()}
               className={`p-2 hover:bg-gray-100 rounded-lg transition ${
-                menu.showFavoritesOnly ? 'bg-red-100' : ''
+                favoritesOnly ? 'bg-red-100' : ''
               }`}
               title="Show favorites only"
             >
               <Heart
                 size={20}
-                className={menu.showFavoritesOnly ? 'text-red-600 fill-red-600' : 'text-gray-700'}
+                className={favoritesOnly ? 'text-red-600 fill-red-600' : 'text-gray-700'}
               />
             </button>
 
@@ -641,8 +647,14 @@ export default function TopMenu({
                     >
                       📋 My Listings
                     </button>
-                    <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded">
-                      ❤️ Saved Searches
+                    <button
+                      onClick={() => {
+                        onSavedSearches?.()
+                        setMenu((prev) => ({ ...prev, accountMenuOpen: false }))
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded"
+                    >
+                      ❤️ Saved Listings
                     </button>
                     <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded">
                       ⚙️ Settings
