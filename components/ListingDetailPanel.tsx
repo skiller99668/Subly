@@ -9,6 +9,8 @@ import {
   Mail,
   MessageSquare,
   User as UserIcon,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { useAuth } from '@/app/providers'
 import { Listing } from '@/utils/supabase'
@@ -92,38 +94,57 @@ export default function ListingDetailPanel({
 
         <div className="flex-1 overflow-y-auto">
           {/* Image gallery */}
-          <div className="bg-gray-100">
+          <div className="relative bg-gray-100">
             {images.length > 0 ? (
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={images[activeImage]}
                   alt={`${listing.title} photo ${activeImage + 1}`}
-                  className="w-full h-56 object-cover"
+                  className="w-full h-64 object-cover"
                 />
                 {images.length > 1 && (
-                  <div className="flex gap-2 p-2 overflow-x-auto">
-                    {images.map((img, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setActiveImage(i)}
-                        className={`shrink-0 rounded-md overflow-hidden border-2 ${
-                          i === activeImage ? 'border-blue-500' : 'border-transparent'
-                        }`}
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={img}
-                          alt={`Thumbnail ${i + 1}`}
-                          className="w-16 h-16 object-cover"
+                  <>
+                    {/* Prev / next arrows */}
+                    <button
+                      onClick={() =>
+                        setActiveImage(
+                          (activeImage - 1 + images.length) % images.length
+                        )
+                      }
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-1.5 transition"
+                      aria-label="Previous photo"
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                    <button
+                      onClick={() =>
+                        setActiveImage((activeImage + 1) % images.length)
+                      }
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-1.5 transition"
+                      aria-label="Next photo"
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+
+                    {/* Dot indicators */}
+                    <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
+                      {images.map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setActiveImage(i)}
+                          className={`w-2 h-2 rounded-full transition ${
+                            i === activeImage ? 'bg-white' : 'bg-white/50'
+                          }`}
+                          aria-label={`Go to photo ${i + 1}`}
                         />
-                      </button>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  </>
                 )}
               </>
             ) : (
-              <div className="w-full h-56 flex items-center justify-center text-gray-400 text-sm">
+              <div className="w-full h-64 flex items-center justify-center text-gray-400 text-sm">
                 No photos provided
               </div>
             )}

@@ -20,8 +20,8 @@ const zoomForType = (placeTypes: string[]): number => {
   return 13
 }
 
-// McGill fallback when we don't know where the user is looking.
-const DEFAULT_PROXIMITY = { lng: -73.5772, lat: 45.5047 }
+// Montreal fallback when we don't know where the user is looking.
+const DEFAULT_PROXIMITY = { lng: -73.5674, lat: 45.5019 }
 
 // Cheap equirectangular distance² between two points — good enough for ordering
 // suggestions at local scale (corrects longitude for latitude).
@@ -35,7 +35,7 @@ const distanceSq = (
 }
 
 // Forward-geocode a free-text query, biased toward (and sorted by distance from)
-// `proximity` — the point the user is currently looking at, or McGill by default.
+// `proximity` — the point the user is currently looking at, or Montreal by default.
 export async function geocodePlaces(
   query: string,
   token: string,

@@ -109,6 +109,8 @@ CREATE POLICY "Users can delete own listings" ON public.listings FOR DELETE USIN
 -- Messages policies
 CREATE POLICY "Users can read own messages" ON public.messages FOR SELECT USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
 CREATE POLICY "Users can insert messages" ON public.messages FOR INSERT WITH CHECK (auth.uid() = sender_id);
+-- Receivers may update their messages (e.g. mark as read).
+CREATE POLICY "Users can update received messages" ON public.messages FOR UPDATE USING (auth.uid() = receiver_id);
 
 -- Favorites policies
 CREATE POLICY "Users can read own favorites" ON public.favorites FOR SELECT USING (auth.uid() = user_id);

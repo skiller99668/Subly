@@ -3,30 +3,66 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Map, { Marker, MapRef } from 'react-map-gl'
 import Supercluster from 'supercluster'
-import { MapPin } from 'lucide-react'
+import { MapPin, LocateFixed } from 'lucide-react'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import TopMenu from './TopMenu'
 import PostLeasePanel from './PostLeasePanel'
 import ListingDetailPanel from './ListingDetailPanel'
 import MyListingsPanel from './MyListingsPanel'
+import MessagesPanel from './MessagesPanel'
+import AreaListingsPanel from './AreaListingsPanel'
 import LocationListingsPanel, { ListingGroup } from './LocationListingsPanel'
 import { useAuth } from '@/app/providers'
 import { getSupabaseBrowserClient, Listing } from '@/utils/supabase'
 
-const MCGILL_CENTER = {
-  lat: 45.5047,
-  lng: -73.5772,
+// Default map center — central Montreal. Used for non-signed-in users and as a
+// fallback when geolocation is unavailable.
+const MONTREAL_CENTER = {
+  lat: 45.5019,
+  lng: -73.5674,
+  zoom: 12,
+}
+
+// Great-circle distance in km between two lng/lat points.
+function distanceKm(
+  aLng: number,
+  aLat: number,
+  bLng: number,
+  bLat: number
+): number {
+  const R = 6371
+  const dLat = ((bLat - aLat) * Math.PI) / 180
+  const dLng = ((bLng - aLng) * Math.PI) / 180
+  const lat1 = (aLat * Math.PI) / 180
+  const lat2 = (bLat * Math.PI) / 180
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(h))
+}
+
+// How wide an "area" to search, based on how specific the searched place is.
+function radiusKmForZoom(zoom: number): number {
+  if (zoom >= 15) return 2 // a precise address
+  if (zoom >= 13) return 6 // neighborhood
+  if (zoom >= 11) return 15 // city
+  return 50 // region / broad
 }
 
 export default function MapComponent() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const supabase = getSupabaseBrowserClient()
   const mapRef = useRef<MapRef | null>(null)
+  // Ensures the map auto-centers only once (on first load), not on every
+  // user/auth change.
+  const hasCenteredRef = useRef(false)
   const [listings, setListings] = useState<Listing[]>([])
   const [detailListing, setDetailListing] = useState<Listing | null>(null)
   const [postOpen, setPostOpen] = useState(false)
   const [editingListing, setEditingListing] = useState<Listing | null>(null)
   const [myListingsOpen, setMyListingsOpen] = useState(false)
+  const [messagesOpen, setMessagesOpen] = useState(false)
+  const [unreadTotal, setUnreadTotal] = useState(0)
   // When a pin holding several listings is clicked, show the group panel.
   const [selectedGroup, setSelectedGroup] = useState<ListingGroup | null>(null)
   // Current viewport bounds + zoom, used to compute clusters.
@@ -36,7 +72,14 @@ export default function MapComponent() {
   } | null>(null)
   // Pin dropped at the most recently searched address (Google-Maps style).
   const [searchedPin, setSearchedPin] = useState<{ lng: number; lat: number } | null>(null)
-  // Resolved center to fly to once known (null = stay on the McGill default).
+  // The searched place that drives the left "nearby leases" panel.
+  const [areaSearch, setAreaSearch] = useState<{
+    lng: number
+    lat: number
+    name: string
+    zoom: number
+  } | null>(null)
+  // Resolved center to fly to once known (null = stay on the Montreal default).
   const [pendingCenter, setPendingCenter] = useState<{
     lng: number
     lat: number
@@ -48,6 +91,20 @@ export default function MapComponent() {
     ? listings.filter((l) => l.user_id === user.id)
     : []
 
+  // Listings near the searched place, nearest first, for the left panel.
+  const areaListings = useMemo(() => {
+    if (!areaSearch) return []
+    const radius = radiusKmForZoom(areaSearch.zoom)
+    return listings
+      .map((l) => ({
+        l,
+        d: distanceKm(areaSearch.lng, areaSearch.lat, l.lng, l.lat),
+      }))
+      .filter((x) => x.d <= radius)
+      .sort((a, b) => a.d - b.d)
+      .map((x) => x.l)
+  }, [areaSearch, listings])
+
   // Supercluster index of all listings. Points at the same address always
   // cluster together; as you zoom out, nearby listings merge into bigger
   // clusters. Rebuilt whenever the listings change.
@@ -56,7 +113,7 @@ export default function MapComponent() {
       // Small radius → pins only merge when they nearly fully overlap; partial
       // overlap stays as separate pins. Same-address listings (0px apart) still
       // always cluster.
-      radius: 12,
+      radius: 20,
       maxZoom: 22,
     })
     index.load(
@@ -119,6 +176,35 @@ export default function MapComponent() {
     fetchListings()
   }, [fetchListings])
 
+  // Total unread messages, for the top-menu badge.
+  const refreshUnread = useCallback(async () => {
+    if (!user) {
+      setUnreadTotal(0)
+      return
+    }
+    try {
+      const res = await fetch('/api/messages')
+      if (res.ok) {
+        const convos = await res.json()
+        setUnreadTotal(
+          convos.reduce(
+            (sum: number, c: { unreadCount?: number }) => sum + (c.unreadCount || 0),
+            0
+          )
+        )
+      }
+    } catch {
+      // ignore
+    }
+  }, [user])
+
+  // Poll the unread count periodically so the badge stays current.
+  useEffect(() => {
+    refreshUnread()
+    const id = setInterval(refreshUnread, 20000)
+    return () => clearInterval(id)
+  }, [refreshUnread])
+
   const flyTo = useCallback((lng: number, lat: number, zoom = 14) => {
     mapRef.current?.flyTo({ center: [lng, lat], zoom, duration: 1500 })
   }, [])
@@ -129,61 +215,64 @@ export default function MapComponent() {
     return c ? { lng: c.lng, lat: c.lat } : undefined
   }, [])
 
-  // Decide where to center the map on load:
-  //   1. A location the user manually saved to their profile (their choice wins)
-  //   2. The browser's geolocation (auto-prompt)
-  //   3. The McGill default (if nothing else is available / permission denied)
+  // Recenter the map on the user's current location, on demand.
+  const recenterToMe = useCallback(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      (pos) => flyTo(pos.coords.longitude, pos.coords.latitude, 15),
+      () => {
+        // Permission denied / unavailable — do nothing.
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    )
+  }, [flyTo])
+
+  // Decide where to center the map — ONCE, on first load (after auth resolves):
+  //   • Not signed in  → stay in Montreal (the default view).
+  //   • Signed in      → their current location (geolocation), falling back to
+  //     a saved profile location, then Montreal.
+  // Guarded so it never re-centers on later user/auth changes (token refresh,
+  // tab focus), which previously yanked the map back periodically.
   useEffect(() => {
-    let cancelled = false
+    if (authLoading || hasCenteredRef.current) return
+    hasCenteredRef.current = true
 
-    const resolveLocation = async () => {
-      // 1) Saved profile location.
-      if (user) {
-        const { data } = await supabase
-          .from('users')
-          .select('location_lat, location_lng')
-          .eq('id', user.id)
-          .single()
+    // Non-signed-in users just stay on the Montreal default.
+    if (!user) return
 
-        if (
-          !cancelled &&
-          data?.location_lat != null &&
-          data?.location_lng != null
-        ) {
+    // Fallback if geolocation is denied/unavailable: saved profile location,
+    // otherwise the Montreal default (initial view state).
+    const useFallback = async () => {
+      const { data } = await supabase
+        .from('users')
+        .select('location_lat, location_lng')
+        .eq('id', user.id)
+        .single()
+      if (data?.location_lat != null && data?.location_lng != null) {
+        setPendingCenter({
+          lng: data.location_lng,
+          lat: data.location_lat,
+          zoom: 13,
+        })
+      }
+    }
+
+    // Primary: the user's current location — their spawn point on load.
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) =>
           setPendingCenter({
-            lng: data.location_lng,
-            lat: data.location_lat,
-            zoom: 13,
-          })
-          return
-        }
-      }
-
-      // 2) Browser geolocation.
-      if (typeof navigator !== 'undefined' && navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            if (!cancelled) {
-              setPendingCenter({
-                lng: pos.coords.longitude,
-                lat: pos.coords.latitude,
-                zoom: 14,
-              })
-            }
-          },
-          () => {
-            // Denied or unavailable — keep the McGill default.
-          },
-          { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
-        )
-      }
+            lng: pos.coords.longitude,
+            lat: pos.coords.latitude,
+            zoom: 14,
+          }),
+        () => useFallback(),
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+      )
+    } else {
+      useFallback()
     }
-
-    resolveLocation()
-    return () => {
-      cancelled = true
-    }
-  }, [user, supabase])
+  }, [authLoading, user, supabase])
 
   // Apply the resolved center once it's known and the map is mounted.
   useEffect(() => {
@@ -199,6 +288,8 @@ export default function MapComponent() {
       flyTo(lng, lat, zoom)
       // Only pin precise addresses; clear any prior pin for city/area searches.
       setSearchedPin(dropPin ? { lng, lat } : null)
+      // Open the left panel with leases near the searched place.
+      setAreaSearch({ lng, lat, name, zoom })
       if (user) {
         await supabase
           .from('users')
@@ -235,17 +326,26 @@ export default function MapComponent() {
         onPostLease={() => {
           setEditingListing(null)
           setPostOpen(true)
+          // Make way for the post form's own location preview.
+          setAreaSearch(null)
+          setSearchedPin(null)
         }}
         onMyListings={() => setMyListingsOpen(true)}
+        onMessages={() => setMessagesOpen(true)}
+        onSearchClose={() => {
+          // Keep the pin if a search result panel is open; clear stray pins otherwise.
+          if (!areaSearch) setSearchedPin(null)
+        }}
+        unreadCount={unreadTotal}
         getProximity={getMapCenter}
       />
       <div className="w-full h-full pt-16">
         <Map
           ref={mapRef}
           initialViewState={{
-            longitude: MCGILL_CENTER.lng,
-            latitude: MCGILL_CENTER.lat,
-            zoom: 14,
+            longitude: MONTREAL_CENTER.lng,
+            latitude: MONTREAL_CENTER.lat,
+            zoom: MONTREAL_CENTER.zoom,
           }}
           onLoad={() => {
             // If the center resolved before the map finished loading, apply it now.
@@ -331,6 +431,16 @@ export default function MapComponent() {
             </Marker>
           )}
         </Map>
+
+        {/* Recenter on my location */}
+        <button
+          onClick={recenterToMe}
+          className="absolute bottom-8 right-4 z-10 p-3 bg-white rounded-full shadow-lg hover:bg-gray-50 transition"
+          title="Recenter on my location"
+          aria-label="Recenter on my location"
+        >
+          <LocateFixed size={20} className="text-gray-700" />
+        </button>
       </div>
 
       <MyListingsPanel
@@ -353,11 +463,22 @@ export default function MapComponent() {
         onClose={() => {
           setPostOpen(false)
           setEditingListing(null)
+          setSearchedPin(null)
         }}
         onLocationPreview={handleLocationPreview}
         onPosted={handlePosted}
         getProximity={getMapCenter}
         listing={editingListing}
+      />
+
+      <AreaListingsPanel
+        location={areaSearch}
+        listings={areaListings}
+        onClose={() => {
+          setAreaSearch(null)
+          setSearchedPin(null)
+        }}
+        onSelect={(listing) => setDetailListing(listing)}
       />
 
       <LocationListingsPanel
@@ -369,6 +490,15 @@ export default function MapComponent() {
       <ListingDetailPanel
         listing={detailListing}
         onClose={() => setDetailListing(null)}
+      />
+
+      <MessagesPanel
+        open={messagesOpen}
+        onClose={() => {
+          setMessagesOpen(false)
+          refreshUnread()
+        }}
+        onActivity={refreshUnread}
       />
     </div>
   )

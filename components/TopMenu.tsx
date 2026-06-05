@@ -55,6 +55,9 @@ interface TopMenuProps {
   ) => void
   onPostLease?: () => void
   onMyListings?: () => void
+  onMessages?: () => void
+  onSearchClose?: () => void
+  unreadCount?: number
   // Returns the current map center so suggestions can be sorted by proximity.
   getProximity?: () => { lng: number; lat: number } | undefined
 }
@@ -66,6 +69,9 @@ export default function TopMenu({
   onLocationSelect,
   onPostLease,
   onMyListings,
+  onMessages,
+  onSearchClose,
+  unreadCount = 0,
   getProximity,
 }: TopMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
@@ -107,9 +113,23 @@ export default function TopMenu({
       // ignore malformed storage
     }
   }, [])
+
+  // Clear the dropped map pin when the search dropdown is dismissed — but not
+  // when it closed because the user just selected a place (we keep that pin).
+  const prevSearchOpen = useRef(false)
+  const justSelected = useRef(false)
+  useEffect(() => {
+    if (prevSearchOpen.current && !menu.searchOpen) {
+      if (justSelected.current) {
+        justSelected.current = false
+      } else {
+        onSearchClose?.()
+      }
+    }
+    prevSearchOpen.current = menu.searchOpen
+  }, [menu.searchOpen, onSearchClose])
   // Placeholder counters until compare/messages/notifications are wired up.
   const [compareCount] = useState(0)
-  const [unreadMessages] = useState(3)
   const [notifications] = useState(2)
 
   // Debounced Mapbox geocoding for the "find subleases in <place>" search.
@@ -152,6 +172,8 @@ export default function TopMenu({
   const clearRecents = () => persistRecents([])
 
   const selectLocation = (result: GeoResult) => {
+    // Keep the dropped pin for this selection (don't clear on dropdown close).
+    justSelected.current = true
     onLocationSelect?.(
       result.lng,
       result.lat,
@@ -566,13 +588,14 @@ export default function TopMenu({
 
             {/* Messages */}
             <button
+              onClick={() => onMessages?.()}
               className="p-2 hover:bg-gray-100 rounded-lg transition relative"
               title="Messages"
             >
               <MessageSquare size={20} className="text-gray-700" />
-              {unreadMessages > 0 && (
+              {unreadCount > 0 && (
                 <span className="absolute top-0 right-0 bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {unreadMessages}
+                  {unreadCount}
                 </span>
               )}
             </button>

@@ -82,8 +82,11 @@ export default function PostLeasePanel({
 
   const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
+      // Append all picked files (multi-select supported).
       setFiles((prev) => [...prev, ...Array.from(e.target.files!)])
     }
+    // Reset so the same file(s) can be re-selected and onChange always fires.
+    e.target.value = ''
   }
 
   const removeFile = (index: number) => {
@@ -114,14 +117,22 @@ export default function PostLeasePanel({
     e.preventDefault()
     setError('')
 
-    if (!location) {
-      setError('Please choose a location.')
+    // List exactly what's missing so the user isn't left guessing — the most
+    // common trap is typing an address without selecting it from the dropdown,
+    // which leaves `location` empty.
+    const missing: string[] = []
+    if (!location) missing.push('location (pick a suggestion)')
+    if (!title.trim()) missing.push('title')
+    if (!price) missing.push('price')
+    if (!size) missing.push('size')
+    if (!moveInDate) missing.push('move-in date')
+    if (!description.trim()) missing.push('description')
+
+    if (missing.length > 0) {
+      setError(`Please add: ${missing.join(', ')}.`)
       return
     }
-    if (!title || !description || !price || !size || !moveInDate) {
-      setError('Please fill in all fields.')
-      return
-    }
+    if (!location) return // guaranteed by the check above; narrows for TS
 
     setSubmitting(true)
     try {
@@ -320,7 +331,7 @@ export default function PostLeasePanel({
             <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 transition">
               <ImagePlus size={20} className="text-gray-400" />
               <span className="text-xs text-gray-500 mt-1">
-                Click to add photos
+                Click to add photos — you can select several at once
               </span>
               <input
                 type="file"
@@ -366,6 +377,7 @@ export default function PostLeasePanel({
         {/* Sticky footer */}
         <div className="px-6 py-4 border-t">
           <button
+            type="button"
             onClick={handleSubmit}
             disabled={submitting}
             className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2.5 rounded-lg transition disabled:opacity-50"

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { X, Plus, Pencil, Trash2 } from 'lucide-react'
 import { Listing } from '@/utils/supabase'
+import ListingAddress from './ListingAddress'
 
 interface MyListingsPanelProps {
   open: boolean
@@ -119,6 +120,9 @@ export default function MyListingsPanel({
                     <h3 className="font-semibold text-sm text-gray-800 truncate">
                       {listing.title}
                     </h3>
+                    <p className="text-xs text-gray-500 truncate">
+                      <ListingAddress listing={listing} />
+                    </p>
                     <p className="text-sm text-gray-600">
                       ${listing.price}/mo · {listing.size} sq ft
                     </p>
