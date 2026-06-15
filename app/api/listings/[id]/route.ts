@@ -1,6 +1,35 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServerSupabaseClient } from "@/utils/supabase-server"
 
+// GET a single listing (public), with the host's public profile embedded.
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const supabase = await createServerSupabaseClient()
+    const { data, error } = await supabase
+      .from("listings")
+      .select("*, user:users(id, name, username, avatar_url, email)")
+      .eq("id", id)
+      .maybeSingle()
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+    if (!data) {
+      return NextResponse.json({ error: "Listing not found" }, { status: 404 })
+    }
+    return NextResponse.json(data)
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err.message || "Internal server error" },
+      { status: 500 }
+    )
+  }
+}
+
 // PATCH update a listing (owner only — enforced by RLS + the user_id filter)
 export async function PATCH(
   request: NextRequest,

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import {
   X,
   MapPin,
@@ -12,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Heart,
+  ArrowUpRight,
 } from 'lucide-react'
 import { useAuth } from '@/app/providers'
 import { Listing } from '@/utils/supabase'
@@ -88,9 +90,17 @@ export default function ListingDetailPanel({
       <div className="fixed inset-y-0 right-0 z-[61] w-full sm:max-w-md bg-white shadow-2xl flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="text-lg font-bold text-gray-800 truncate pr-4">
-            {listing.title}
-          </h2>
+          <Link
+            href={`/listings/${listing.id}`}
+            className="group flex min-w-0 items-center gap-1.5 pr-4 text-gray-800 transition-colors hover:text-blue-600"
+            title="Open full listing page"
+          >
+            <h2 className="truncate text-lg font-bold">{listing.title}</h2>
+            <ArrowUpRight
+              size={16}
+              className="shrink-0 text-gray-400 transition-colors group-hover:text-blue-600"
+            />
+          </Link>
           <div className="flex items-center gap-1 shrink-0">
             {/* Save / favorite (signed-in users only) */}
             {user && (
