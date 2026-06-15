@@ -31,13 +31,15 @@ CREATE TABLE IF NOT EXISTS public.listings (
   move_in_date DATE NOT NULL,
   address TEXT,
   images TEXT[] DEFAULT '{}',
+  tags TEXT[] DEFAULT '{}',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Image URLs + human-readable address columns (idempotent).
+-- Image URLs + human-readable address + student attribute tags (idempotent).
 ALTER TABLE public.listings ADD COLUMN IF NOT EXISTS images TEXT[] DEFAULT '{}';
 ALTER TABLE public.listings ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE public.listings ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
 
 -- Create messages table
 CREATE TABLE IF NOT EXISTS public.messages (
@@ -71,6 +73,20 @@ CREATE TABLE IF NOT EXISTS public.notifications (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create reviews table (host/landlord reviews — one star rating + optional
+-- comment per author per subject user; authors can edit/delete their own).
+CREATE TABLE IF NOT EXISTS public.reviews (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  subject_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  author_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  comment TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  CONSTRAINT reviews_no_self_review CHECK (author_id <> subject_id),
+  UNIQUE (subject_id, author_id)
+);
+
 -- Standard Supabase grants: roles need table-level privileges before RLS is
 -- even evaluated. Access is still gated by the RLS policies defined below.
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
@@ -87,6 +103,7 @@ CREATE INDEX IF NOT EXISTS idx_messages_sender ON public.messages(sender_id);
 CREATE INDEX IF NOT EXISTS idx_messages_receiver ON public.messages(receiver_id);
 CREATE INDEX IF NOT EXISTS idx_favorites_user ON public.favorites(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON public.notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_subject ON public.reviews(subject_id);
 
 -- Enable RLS
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
@@ -94,6 +111,7 @@ ALTER TABLE public.listings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.favorites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
 
 -- Users policies
 CREATE POLICY "Users can read all users" ON public.users FOR SELECT USING (true);
@@ -119,6 +137,13 @@ CREATE POLICY "Users can delete own favorites" ON public.favorites FOR DELETE US
 
 -- Notifications policies
 CREATE POLICY "Users can read own notifications" ON public.notifications FOR SELECT USING (auth.uid() = user_id);
+
+-- Reviews policies (publicly readable; authors manage only their own, and the
+-- WITH CHECK / table constraint together forbid reviewing yourself)
+CREATE POLICY "Reviews are visible to all" ON public.reviews FOR SELECT USING (true);
+CREATE POLICY "Users can insert own reviews" ON public.reviews FOR INSERT WITH CHECK (auth.uid() = author_id AND author_id <> subject_id);
+CREATE POLICY "Users can update own reviews" ON public.reviews FOR UPDATE USING (auth.uid() = author_id);
+CREATE POLICY "Users can delete own reviews" ON public.reviews FOR DELETE USING (auth.uid() = author_id);
 
 -- =============================================================
 -- Auto-create a public.users profile whenever an auth user is

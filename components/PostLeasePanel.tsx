@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, MapPin, DollarSign, Ruler, Calendar, ImagePlus } from 'lucide-react'
+import { X, MapPin, DollarSign, Ruler, Calendar, ImagePlus, Tags } from 'lucide-react'
 import { useAuth } from '@/app/providers'
 import { getSupabaseBrowserClient, Listing } from '@/utils/supabase'
 import { GeoResult } from '@/utils/geocode'
+import { LISTING_TAGS } from '@/utils/listingTags'
 import LocationSearchInput from './LocationSearchInput'
 
 interface PostLeasePanelProps {
@@ -44,6 +45,7 @@ export default function PostLeasePanel({
   } | null>(null)
   const [existingImages, setExistingImages] = useState<string[]>([])
   const [files, setFiles] = useState<File[]>([])
+  const [tags, setTags] = useState<string[]>([])
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -62,6 +64,7 @@ export default function PostLeasePanel({
         name: listing.address ?? '',
       })
       setExistingImages(listing.images ?? [])
+      setTags(listing.tags ?? [])
     } else {
       setTitle('')
       setDescription('')
@@ -70,10 +73,17 @@ export default function PostLeasePanel({
       setMoveInDate('')
       setLocation(null)
       setExistingImages([])
+      setTags([])
     }
     setFiles([])
     setError('')
   }, [open, listing])
+
+  const toggleTag = (id: string) => {
+    setTags((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+    )
+  }
 
   const handleLocationSelect = (result: GeoResult) => {
     setLocation({ lng: result.lng, lat: result.lat, name: result.name })
@@ -149,6 +159,7 @@ export default function PostLeasePanel({
         move_in_date: moveInDate,
         address: location.name || null,
         images,
+        tags,
       }
 
       const res = await fetch(
@@ -236,7 +247,7 @@ export default function PostLeasePanel({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Bright 1-bedroom near McGill"
+              placeholder="e.g. Bright 1-bedroom near campus"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </section>
@@ -296,6 +307,37 @@ export default function PostLeasePanel({
               placeholder="Describe the space, amenities, lease terms..."
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
+          </section>
+
+          {/* Student attribute tags */}
+          <section>
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1">
+              <Tags size={16} /> Tags
+            </label>
+            <p className="text-xs text-gray-500 mb-3">
+              Help the right students find your place. Pick all that apply.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {LISTING_TAGS.map(({ id, label, icon: Icon }) => {
+                const active = tags.includes(id)
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => toggleTag(id)}
+                    aria-pressed={active}
+                    className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition ${
+                      active
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                    }`}
+                  >
+                    <Icon size={14} />
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
           </section>
 
           {/* Photos */}

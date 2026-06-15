@@ -7,7 +7,7 @@ import ListingAddress from './ListingAddress'
 interface AreaListingsPanelProps {
   // The searched place (null = panel closed).
   location: { name: string } | null
-  // Listings near the searched location, nearest first.
+  // Listings near the searched location, ordered by the active Filters sort.
   listings: Listing[]
   onClose: () => void
   onSelect: (listing: Listing) => void

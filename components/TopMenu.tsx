@@ -6,6 +6,13 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/app/providers'
 import { geocodePlaces, GeoResult } from '@/utils/geocode'
 import {
+  ListingFilters,
+  EMPTY_FILTERS,
+  RadiusUnit,
+  SortBy,
+  radiusToKm,
+} from '@/utils/filters'
+import {
   Search,
   Sliders,
   Share2,
@@ -23,6 +30,7 @@ import {
   DollarSign,
   Ruler,
   Home,
+  MapPin,
 } from 'lucide-react'
 
 interface MenuState {
@@ -37,14 +45,18 @@ interface MenuState {
 }
 
 interface Filters {
-  minPrice: number
-  maxPrice: number
-  minSize: number
-  maxSize: number
-  distanceToMcGill: number
+  // Null = no bound (so an empty input doesn't exclude anything).
+  minPrice: number | null
+  maxPrice: number | null
+  minSize: number | null
+  maxSize: number | null
+  // Proximity: a chosen center plus a radius expressed in the chosen unit.
+  near: { lng: number; lat: number; name: string } | null
+  radius: number
+  radiusUnit: RadiusUnit
   moveInDateStart: string
   moveInDateEnd: string
-  sortBy: 'newest' | 'price-low' | 'price-high' | 'distance' | 'rating'
+  sortBy: SortBy
 }
 
 interface TopMenuProps {
@@ -65,10 +77,37 @@ interface TopMenuProps {
   unreadCount?: number
   // Returns the current map center so suggestions can be sorted by proximity.
   getProximity?: () => { lng: number; lat: number } | undefined
+  // Push the applied price/size/date/proximity filters up to the map.
+  onApplyFilters?: (filters: ListingFilters) => void
+  // Number of active filter groups, for the button's count badge.
+  activeFilterCount?: number
 }
 
 const RECENTS_KEY = 'subly.recentSearches'
 const MAX_RECENTS = 6
+
+// Slider bounds per radius unit (walk = estimated minutes on foot).
+const RADIUS_CONFIG: Record<
+  RadiusUnit,
+  { min: number; max: number; step: number; label: string }
+> = {
+  km: { min: 0.5, max: 25, step: 0.5, label: 'km' },
+  mi: { min: 0.5, max: 15, step: 0.5, label: 'mi' },
+  walk: { min: 5, max: 60, step: 5, label: 'min walk' },
+}
+
+const DEFAULT_FILTERS: Filters = {
+  minPrice: null,
+  maxPrice: null,
+  minSize: null,
+  maxSize: null,
+  near: null,
+  radius: 15,
+  radiusUnit: 'walk',
+  moveInDateStart: '',
+  moveInDateEnd: '',
+  sortBy: 'newest',
+}
 
 export default function TopMenu({
   onLocationSelect,
@@ -81,6 +120,8 @@ export default function TopMenu({
   favoritesOnly = false,
   unreadCount = 0,
   getProximity,
+  onApplyFilters,
+  activeFilterCount = 0,
 }: TopMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
   const { user, signOut } = useAuth()
@@ -96,21 +137,17 @@ export default function TopMenu({
     savedSearchesOpen: false,
   })
 
-  const [filters, setFilters] = useState<Filters>({
-    minPrice: 400,
-    maxPrice: 1000,
-    minSize: 300,
-    maxSize: 1500,
-    distanceToMcGill: 5,
-    moveInDateStart: '',
-    moveInDateEnd: '',
-    sortBy: 'newest',
-  })
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
 
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<GeoResult[]>([])
   const [searching, setSearching] = useState(false)
   const [recentSearches, setRecentSearches] = useState<GeoResult[]>([])
+
+  // Proximity ("Near a location") geocoding state for the Filters panel.
+  const [nearQuery, setNearQuery] = useState('')
+  const [nearResults, setNearResults] = useState<GeoResult[]>([])
+  const [nearSearching, setNearSearching] = useState(false)
 
   // Load recent searches from localStorage on mount.
   useEffect(() => {
@@ -164,6 +201,30 @@ export default function TopMenu({
     return () => clearTimeout(timer)
   }, [searchQuery])
 
+  // Debounced geocoding for the Filters panel's "Near a location" picker.
+  useEffect(() => {
+    const q = nearQuery.trim()
+    if (q.length < 3) {
+      setNearResults([])
+      return
+    }
+    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+    if (!token) return
+
+    setNearSearching(true)
+    const timer = setTimeout(async () => {
+      try {
+        setNearResults(await geocodePlaces(q, token, getProximity?.()))
+      } catch {
+        setNearResults([])
+      } finally {
+        setNearSearching(false)
+      }
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [nearQuery])
+
   const persistRecents = (next: GeoResult[]) => {
     setRecentSearches(next)
     try {
@@ -210,17 +271,58 @@ export default function TopMenu({
     }))
   }
 
+  // Translate the panel's draft state into the map's filter model.
+  const buildFilters = (): ListingFilters => ({
+    minPrice: filters.minPrice,
+    maxPrice: filters.maxPrice,
+    minSize: filters.minSize,
+    maxSize: filters.maxSize,
+    moveInStart: filters.moveInDateStart || null,
+    moveInEnd: filters.moveInDateEnd || null,
+    near: filters.near,
+    radiusKm: filters.near ? radiusToKm(filters.radius, filters.radiusUnit) : null,
+    sortBy: filters.sortBy,
+  })
+
+  const applyFilters = () => {
+    onApplyFilters?.(buildFilters())
+    setMenu((prev) => ({ ...prev, filtersOpen: false }))
+  }
+
   const resetFilters = () => {
-    setFilters({
-      minPrice: 400,
-      maxPrice: 1000,
-      minSize: 300,
-      maxSize: 1500,
-      distanceToMcGill: 5,
-      moveInDateStart: '',
-      moveInDateEnd: '',
-      sortBy: 'newest',
-    })
+    setFilters(DEFAULT_FILTERS)
+    setNearQuery('')
+    setNearResults([])
+    onApplyFilters?.(EMPTY_FILTERS)
+  }
+
+  // Switching units keeps the radius within the new unit's slider bounds.
+  const setRadiusUnit = (unit: RadiusUnit) => {
+    const cfg = RADIUS_CONFIG[unit]
+    setFilters((f) => ({
+      ...f,
+      radiusUnit: unit,
+      radius: Math.min(Math.max(f.radius, cfg.min), cfg.max),
+    }))
+  }
+
+  const selectNear = (result: GeoResult) => {
+    setFilters((f) => ({
+      ...f,
+      near: { lng: result.lng, lat: result.lat, name: result.name },
+    }))
+    setNearQuery('')
+    setNearResults([])
+  }
+
+  const useMapCenterAsNear = () => {
+    const c = getProximity?.()
+    if (c) {
+      setFilters((f) => ({
+        ...f,
+        near: { lng: c.lng, lat: c.lat, name: 'Map center' },
+      }))
+    }
   }
 
   const handlePostLease = () => {
@@ -361,6 +463,11 @@ export default function TopMenu({
               >
                 <Sliders size={20} className="text-gray-700" />
                 <span className="text-sm font-medium text-gray-700">Filters</span>
+                {activeFilterCount > 0 && (
+                  <span className="ml-0.5 bg-blue-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
               </button>
               {menu.filtersOpen && (
                 <div className="absolute top-12 left-0 w-96 bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-h-96 overflow-y-auto">
@@ -383,18 +490,24 @@ export default function TopMenu({
                       <input
                         type="number"
                         placeholder="Min"
-                        value={filters.minPrice}
+                        value={filters.minPrice ?? ''}
                         onChange={(e) =>
-                          setFilters({ ...filters, minPrice: parseInt(e.target.value) })
+                          setFilters({
+                            ...filters,
+                            minPrice: e.target.value === '' ? null : Number(e.target.value),
+                          })
                         }
                         className="w-1/2 px-2 py-1 border border-gray-300 rounded text-sm"
                       />
                       <input
                         type="number"
                         placeholder="Max"
-                        value={filters.maxPrice}
+                        value={filters.maxPrice ?? ''}
                         onChange={(e) =>
-                          setFilters({ ...filters, maxPrice: parseInt(e.target.value) })
+                          setFilters({
+                            ...filters,
+                            maxPrice: e.target.value === '' ? null : Number(e.target.value),
+                          })
                         }
                         className="w-1/2 px-2 py-1 border border-gray-300 rounded text-sm"
                       />
@@ -410,45 +523,139 @@ export default function TopMenu({
                       <input
                         type="number"
                         placeholder="Min"
-                        value={filters.minSize}
+                        value={filters.minSize ?? ''}
                         onChange={(e) =>
-                          setFilters({ ...filters, minSize: parseInt(e.target.value) })
+                          setFilters({
+                            ...filters,
+                            minSize: e.target.value === '' ? null : Number(e.target.value),
+                          })
                         }
                         className="w-1/2 px-2 py-1 border border-gray-300 rounded text-sm"
                       />
                       <input
                         type="number"
                         placeholder="Max"
-                        value={filters.maxSize}
+                        value={filters.maxSize ?? ''}
                         onChange={(e) =>
-                          setFilters({ ...filters, maxSize: parseInt(e.target.value) })
+                          setFilters({
+                            ...filters,
+                            maxSize: e.target.value === '' ? null : Number(e.target.value),
+                          })
                         }
                         className="w-1/2 px-2 py-1 border border-gray-300 rounded text-sm"
                       />
                     </div>
                   </div>
 
-                  {/* Distance to McGill */}
+                  {/* Proximity to a location */}
                   <div className="mb-4">
                     <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                      📍 Distance to McGill
+                      <MapPin size={16} /> Near a location
                     </label>
-                    <input
-                      type="range"
-                      min="0.5"
-                      max="10"
-                      step="0.5"
-                      value={filters.distanceToMcGill}
-                      onChange={(e) =>
-                        setFilters({
-                          ...filters,
-                          distanceToMcGill: parseFloat(e.target.value),
-                        })
-                      }
-                      className="w-full"
-                    />
-                    <div className="text-xs text-gray-600 mt-1">
-                      {filters.distanceToMcGill} km
+
+                    {filters.near ? (
+                      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-blue-50 rounded-lg">
+                        <span className="text-sm text-blue-700 truncate">
+                          📍 {filters.near.name}
+                        </span>
+                        <button
+                          onClick={() => setFilters({ ...filters, near: null })}
+                          className="text-blue-400 hover:text-blue-600 shrink-0"
+                          aria-label="Clear location"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <input
+                          type="text"
+                          placeholder="Search a campus, address, or area…"
+                          value={nearQuery}
+                          onChange={(e) => setNearQuery(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        {nearQuery.trim().length >= 3 && (
+                          <div className="mt-1 border border-gray-200 rounded-lg max-h-40 overflow-y-auto">
+                            {nearSearching && (
+                              <div className="text-sm text-gray-400 p-2">Searching…</div>
+                            )}
+                            {!nearSearching && nearResults.length === 0 && (
+                              <div className="text-sm text-gray-400 p-2">
+                                No matches found
+                              </div>
+                            )}
+                            {nearResults.map((result, i) => (
+                              <button
+                                key={`${result.lng},${result.lat},${i}`}
+                                onClick={() => selectNear(result)}
+                                className="w-full text-left text-sm text-gray-600 p-2 hover:bg-gray-50"
+                              >
+                                📍 {result.name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <button
+                          onClick={useMapCenterAsNear}
+                          className="mt-1.5 text-xs text-blue-500 hover:text-blue-600"
+                        >
+                          Use current map center
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Radius + unit — only meaningful once a center is chosen */}
+                    <div
+                      className={`mt-3 ${
+                        filters.near ? '' : 'opacity-50 pointer-events-none'
+                      }`}
+                    >
+                      <div className="flex gap-1 mb-2">
+                        {(['km', 'mi', 'walk'] as RadiusUnit[]).map((unit) => (
+                          <button
+                            key={unit}
+                            onClick={() => setRadiusUnit(unit)}
+                            className={`flex-1 text-xs py-1 rounded border transition ${
+                              filters.radiusUnit === unit
+                                ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                                : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                            }`}
+                          >
+                            {RADIUS_CONFIG[unit].label}
+                          </button>
+                        ))}
+                      </div>
+                      <input
+                        type="range"
+                        min={RADIUS_CONFIG[filters.radiusUnit].min}
+                        max={RADIUS_CONFIG[filters.radiusUnit].max}
+                        step={RADIUS_CONFIG[filters.radiusUnit].step}
+                        value={filters.radius}
+                        onChange={(e) =>
+                          setFilters({ ...filters, radius: parseFloat(e.target.value) })
+                        }
+                        className="w-full"
+                      />
+                      <div className="text-xs text-gray-600 mt-1">
+                        {filters.near
+                          ? `Within ${filters.radius} ${
+                              RADIUS_CONFIG[filters.radiusUnit].label
+                            }${
+                              filters.radiusUnit === 'km'
+                                ? ''
+                                : ` (~${radiusToKm(
+                                    filters.radius,
+                                    filters.radiusUnit
+                                  ).toFixed(1)} km)`
+                            } of ${filters.near.name}`
+                          : 'Pick a location to filter by distance'}
+                      </div>
+                      {filters.radiusUnit === 'walk' && filters.near && (
+                        <div className="text-[11px] text-gray-400 mt-0.5">
+                          Walk time is estimated from distance.
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -501,12 +708,15 @@ export default function TopMenu({
                       <option value="newest">Newest Posted</option>
                       <option value="price-low">Price: Low to High</option>
                       <option value="price-high">Price: High to Low</option>
-                      <option value="distance">Closest to McGill</option>
+                      <option value="distance">Closest first</option>
                       <option value="rating">Best Rated</option>
                     </select>
                   </div>
 
-                  <button className="w-full bg-blue-500 text-white py-2 rounded-lg font-medium text-sm hover:bg-blue-600 transition">
+                  <button
+                    onClick={applyFilters}
+                    className="w-full bg-blue-500 text-white py-2 rounded-lg font-medium text-sm hover:bg-blue-600 transition"
+                  >
                     Apply Filters
                   </button>
                 </div>
@@ -597,7 +807,7 @@ export default function TopMenu({
                   <div className="space-y-2 max-h-48 overflow-y-auto">
                     <div className="text-sm p-2 bg-blue-50 rounded cursor-pointer hover:bg-blue-100">
                       <p className="font-medium">New matching listing</p>
-                      <p className="text-xs text-gray-600">2-bed near McGill posted 1h ago</p>
+                      <p className="text-xs text-gray-600">2-bed near campus posted 1h ago</p>
                     </div>
                     <div className="text-sm p-2 bg-blue-50 rounded cursor-pointer hover:bg-blue-100">
                       <p className="font-medium">Landlord responded</p>

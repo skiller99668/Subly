@@ -42,6 +42,8 @@ export interface Listing {
   move_in_date: string
   address?: string
   images?: string[]
+  // Student-oriented attribute tags (see utils/listingTags.ts).
+  tags?: string[]
   created_at: string
   user?: User
 }
@@ -62,6 +64,19 @@ export interface Favorite {
   user_id: string
   listing_id: string
   created_at: string
+}
+
+// A star rating + optional written review left by one user (author) about a
+// host/landlord (subject). One per author per subject — editable.
+export interface Review {
+  id: string
+  subject_id: string
+  author_id: string
+  rating: number
+  comment?: string
+  created_at: string
+  updated_at?: string
+  author?: User
 }
 
 export interface Notification {

@@ -1,5 +1,5 @@
 # Subly
-Find a sublease, post your own — your community's rental marketplace.
+Student subleases & roommates, on a map — find a place, a roommate, or a safe spot near campus, anywhere. Free to post.
 
 ## Getting Started
 
@@ -38,10 +38,12 @@ Find a sublease, post your own — your community's rental marketplace.
    Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Current Features
-- ✅ Interactive Mapbox map centered on McGill University
-- ✅ Sample listings displayed as markers on the map
-- ✅ Click markers to view listing details in a popup
-- ✅ Red "M" marker showing McGill's location
+- ✅ Interactive Mapbox map that spawns at the signed-in user's location
+- ✅ Real listings with photos, clustered as price pins on the map
+- ✅ Post / edit / delete your own listings, with image upload
+- ✅ Student attribute tags (roommate, women-only, students-welcome, furnished, …) with a category filter bar
+- ✅ Location search, favorites/saved listings, and direct messaging between users
+- ✅ Star ratings + written reviews for hosts/landlords, shown on each listing
 
 ## Architecture
 - **Frontend**: Next.js + React + TypeScript

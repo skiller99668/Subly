@@ -15,7 +15,9 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/app/providers'
 import { Listing } from '@/utils/supabase'
+import { TAG_BY_ID } from '@/utils/listingTags'
 import ListingAddress from './ListingAddress'
+import LandlordReviews from './LandlordReviews'
 
 interface ListingDetailPanelProps {
   listing: Listing | null
@@ -203,6 +205,26 @@ export default function ListingDetailPanel({
               </div>
             </div>
 
+            {/* Student attribute tags */}
+            {listing.tags && listing.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {listing.tags.map((id) => {
+                  const tag = TAG_BY_ID[id]
+                  if (!tag) return null
+                  const Icon = tag.icon
+                  return (
+                    <span
+                      key={id}
+                      className="flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700"
+                    >
+                      <Icon size={13} />
+                      {tag.label}
+                    </span>
+                  )
+                })}
+              </div>
+            )}
+
             {/* Description */}
             <div>
               <h3 className="text-sm font-semibold text-gray-700 mb-1">
@@ -280,6 +302,12 @@ export default function ListingDetailPanel({
                 </button>
               )}
             </div>
+
+            {/* Host / landlord reviews */}
+            <LandlordReviews
+              subjectId={listing.user_id}
+              subjectName={landlord?.name || landlord?.username || 'this host'}
+            />
           </div>
         </div>
       </div>

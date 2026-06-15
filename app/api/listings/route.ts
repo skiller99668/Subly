@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { title, description, price, size, lat, lng, move_in_date, images, address } = body
+    const { title, description, price, size, lat, lng, move_in_date, images, address, tags } = body
 
     if (!title || !description || !price || !size || !lat || !lng || !move_in_date) {
       return NextResponse.json(
@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
           move_in_date,
           address: address || null,
           images: Array.isArray(images) ? images : [],
+          tags: Array.isArray(tags) ? tags : [],
         },
       ])
       .select()

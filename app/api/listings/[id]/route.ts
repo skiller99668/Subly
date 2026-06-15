@@ -30,6 +30,9 @@ export async function PATCH(
     if (body.images !== undefined) {
       updates.images = Array.isArray(body.images) ? body.images : []
     }
+    if (body.tags !== undefined) {
+      updates.tags = Array.isArray(body.tags) ? body.tags : []
+    }
 
     const { data, error } = await supabase
       .from("listings")

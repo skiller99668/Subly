@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import Map, { Marker, MapRef } from 'react-map-gl'
+import Map, { Marker, MapRef, Source, Layer } from 'react-map-gl'
 import Supercluster from 'supercluster'
 import { MapPin, LocateFixed } from 'lucide-react'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import TopMenu from './TopMenu'
+import CategoryBar from './CategoryBar'
 import PostLeasePanel from './PostLeasePanel'
 import ListingDetailPanel from './ListingDetailPanel'
 import MyListingsPanel from './MyListingsPanel'
@@ -15,31 +16,22 @@ import AreaListingsPanel from './AreaListingsPanel'
 import LocationListingsPanel, { ListingGroup } from './LocationListingsPanel'
 import { useAuth } from '@/app/providers'
 import { getSupabaseBrowserClient, Listing } from '@/utils/supabase'
+import {
+  ListingFilters,
+  EMPTY_FILTERS,
+  countActiveFilters,
+  filterListings,
+  sortListings,
+  distanceKm,
+  circlePolygon,
+} from '@/utils/filters'
 
-// Default map center — central Montreal. Used for non-signed-in users and as a
-// fallback when geolocation is unavailable.
-const MONTREAL_CENTER = {
+// Fallback map center, used only for non-signed-in users and when geolocation
+// is unavailable. Signed-in users spawn at their own GPS location on load.
+const DEFAULT_CENTER = {
   lat: 45.5019,
   lng: -73.5674,
   zoom: 12,
-}
-
-// Great-circle distance in km between two lng/lat points.
-function distanceKm(
-  aLng: number,
-  aLat: number,
-  bLng: number,
-  bLat: number
-): number {
-  const R = 6371
-  const dLat = ((bLat - aLat) * Math.PI) / 180
-  const dLng = ((bLng - aLng) * Math.PI) / 180
-  const lat1 = (aLat * Math.PI) / 180
-  const lat2 = (bLat * Math.PI) / 180
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2
-  return 2 * R * Math.asin(Math.sqrt(h))
 }
 
 // How wide an "area" to search, based on how specific the searched place is.
@@ -68,6 +60,10 @@ export default function MapComponent() {
   const [favorites, setFavorites] = useState<Set<string>>(new Set())
   const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [savedOpen, setSavedOpen] = useState(false)
+  // Active student-attribute category filters (AND semantics).
+  const [activeTags, setActiveTags] = useState<string[]>([])
+  // Applied price/size/date/proximity filters from the top-menu Filters panel.
+  const [appliedFilters, setAppliedFilters] = useState<ListingFilters>(EMPTY_FILTERS)
   // When a pin holding several listings is clicked, show the group panel.
   const [selectedGroup, setSelectedGroup] = useState<ListingGroup | null>(null)
   // Current viewport bounds + zoom, used to compute clusters.
@@ -84,7 +80,7 @@ export default function MapComponent() {
     name: string
     zoom: number
   } | null>(null)
-  // Resolved center to fly to once known (null = stay on the Montreal default).
+  // Resolved center to fly to once known (null = stay on the default view).
   const [pendingCenter, setPendingCenter] = useState<{
     lng: number
     lat: number
@@ -99,24 +95,46 @@ export default function MapComponent() {
   // The user's favorited listings, for the "Saved" panel.
   const savedListings = listings.filter((l) => favorites.has(l.id))
 
-  // Listings shown on the map — all, or only favorites when the filter is on.
-  const visibleListings = favoritesOnly
-    ? listings.filter((l) => favorites.has(l.id))
-    : listings
+  // Listings shown on the map after applying the Filters panel (price/size/
+  // date/proximity), the favorites toggle, and the active category tags
+  // (a listing must carry every selected tag).
+  const visibleListings = useMemo(() => {
+    let result = filterListings(listings, appliedFilters)
+    if (favoritesOnly) result = result.filter((l) => favorites.has(l.id))
+    if (activeTags.length > 0) {
+      result = result.filter((l) =>
+        activeTags.every((t) => l.tags?.includes(t))
+      )
+    }
+    return result
+  }, [listings, appliedFilters, favoritesOnly, favorites, activeTags])
 
-  // Listings near the searched place, nearest first, for the left panel.
+  // Listings near the searched place for the left panel: the active filters
+  // also apply here, then the area radius, then the chosen sort order.
   const areaListings = useMemo(() => {
     if (!areaSearch) return []
     const radius = radiusKmForZoom(areaSearch.zoom)
-    return listings
-      .map((l) => ({
-        l,
-        d: distanceKm(areaSearch.lng, areaSearch.lat, l.lng, l.lat),
-      }))
-      .filter((x) => x.d <= radius)
-      .sort((a, b) => a.d - b.d)
-      .map((x) => x.l)
-  }, [areaSearch, listings])
+    const nearby = filterListings(listings, appliedFilters).filter(
+      (l) => distanceKm(areaSearch.lng, areaSearch.lat, l.lng, l.lat) <= radius
+    )
+    return sortListings(nearby, appliedFilters.sortBy, {
+      lng: areaSearch.lng,
+      lat: areaSearch.lat,
+    })
+  }, [areaSearch, listings, appliedFilters])
+
+  // GeoJSON circle for the proximity filter, drawn on the map when active.
+  const filterCircle = useMemo(
+    () =>
+      appliedFilters.near && appliedFilters.radiusKm != null
+        ? circlePolygon(
+            appliedFilters.near.lng,
+            appliedFilters.near.lat,
+            appliedFilters.radiusKm
+          )
+        : null,
+    [appliedFilters.near, appliedFilters.radiusKm]
+  )
 
   // Supercluster index of all listings. Points at the same address always
   // cluster together; as you zoom out, nearby listings merge into bigger
@@ -284,20 +302,20 @@ export default function MapComponent() {
   }, [flyTo])
 
   // Decide where to center the map — ONCE, on first load (after auth resolves):
-  //   • Not signed in  → stay in Montreal (the default view).
+  //   • Not signed in  → stay on the default view.
   //   • Signed in      → their current location (geolocation), falling back to
-  //     a saved profile location, then Montreal.
+  //     a saved profile location, then the default center.
   // Guarded so it never re-centers on later user/auth changes (token refresh,
   // tab focus), which previously yanked the map back periodically.
   useEffect(() => {
     if (authLoading || hasCenteredRef.current) return
     hasCenteredRef.current = true
 
-    // Non-signed-in users just stay on the Montreal default.
+    // Non-signed-in users just stay on the default view.
     if (!user) return
 
     // Fallback if geolocation is denied/unavailable: saved profile location,
-    // otherwise the Montreal default (initial view state).
+    // otherwise the default center (initial view state).
     const useFallback = async () => {
       const { data } = await supabase
         .from('users')
@@ -397,14 +415,25 @@ export default function MapComponent() {
         }}
         unreadCount={unreadTotal}
         getProximity={getMapCenter}
+        onApplyFilters={setAppliedFilters}
+        activeFilterCount={countActiveFilters(appliedFilters)}
+      />
+      <CategoryBar
+        active={activeTags}
+        onToggle={(id) =>
+          setActiveTags((prev) =>
+            prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+          )
+        }
+        onClear={() => setActiveTags([])}
       />
       <div className="w-full h-full pt-16">
         <Map
           ref={mapRef}
           initialViewState={{
-            longitude: MONTREAL_CENTER.lng,
-            latitude: MONTREAL_CENTER.lat,
-            zoom: MONTREAL_CENTER.zoom,
+            longitude: DEFAULT_CENTER.lng,
+            latitude: DEFAULT_CENTER.lat,
+            zoom: DEFAULT_CENTER.zoom,
           }}
           onLoad={() => {
             // If the center resolved before the map finished loading, apply it now.
@@ -418,6 +447,35 @@ export default function MapComponent() {
           mapStyle="mapbox://styles/mapbox/streets-v12"
           mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
         >
+          {/* Proximity filter radius (sits beneath the pins) */}
+          {filterCircle && appliedFilters.near && (
+            <>
+              <Source id="filter-radius" type="geojson" data={filterCircle}>
+                <Layer
+                  id="filter-radius-fill"
+                  type="fill"
+                  paint={{ 'fill-color': '#3b82f6', 'fill-opacity': 0.08 }}
+                />
+                <Layer
+                  id="filter-radius-line"
+                  type="line"
+                  paint={{
+                    'line-color': '#3b82f6',
+                    'line-width': 1.5,
+                    'line-dasharray': [2, 2],
+                  }}
+                />
+              </Source>
+              <Marker
+                longitude={appliedFilters.near.lng}
+                latitude={appliedFilters.near.lat}
+                anchor="center"
+              >
+                <div className="w-3 h-3 rounded-full bg-blue-600 border-2 border-white shadow" />
+              </Marker>
+            </>
+          )}
+
           {clusters.map((feature) => {
             const [lng, lat] = feature.geometry.coordinates
             const props = feature.properties

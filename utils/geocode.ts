@@ -10,7 +10,7 @@ export interface GeoResult {
 }
 
 // Pick a sensible zoom for the selected place — tighter for a precise address,
-// wider for a city or region (so "subleases in Montreal" frames the whole city).
+// wider for a city or region (so "subleases in <city>" frames the whole city).
 const zoomForType = (placeTypes: string[]): number => {
   if (placeTypes.includes('address') || placeTypes.includes('poi')) return 16
   if (placeTypes.includes('neighborhood') || placeTypes.includes('locality')) return 14
@@ -20,7 +20,7 @@ const zoomForType = (placeTypes: string[]): number => {
   return 13
 }
 
-// Montreal fallback when we don't know where the user is looking.
+// Generic proximity fallback when we don't know where the user is looking.
 const DEFAULT_PROXIMITY = { lng: -73.5674, lat: 45.5019 }
 
 // Cheap equirectangular distance² between two points — good enough for ordering
@@ -35,7 +35,7 @@ const distanceSq = (
 }
 
 // Forward-geocode a free-text query, biased toward (and sorted by distance from)
-// `proximity` — the point the user is currently looking at, or Montreal by default.
+// `proximity` — the point the user is currently looking at, or the fallback above.
 export async function geocodePlaces(
   query: string,
   token: string,
