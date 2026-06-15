@@ -26,6 +26,7 @@ import {
 import { LISTING_TAGS } from '@/utils/listingTags'
 import { requestAndSaveLocation } from '@/utils/location'
 import { useAuth } from '@/app/providers'
+import MessagesPanel from '@/components/MessagesPanel'
 
 const STEPS = [
   {
@@ -81,6 +82,7 @@ const FEATURES = [
 export default function LandingPage() {
   const { user, signOut } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [messagesOpen, setMessagesOpen] = useState(false)
   const [query, setQuery] = useState('')
 
   const displayName = user
@@ -125,13 +127,13 @@ export default function LandingPage() {
             {user ? (
               <>
                 <NotificationsMenu />
-                <Link
-                  href="/map?panel=messages"
+                <button
+                  onClick={() => setMessagesOpen(true)}
                   title="Messages"
                   className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
                 >
                   <MessagesSquare className="h-[18px] w-[18px]" />
-                </Link>
+                </button>
                 <Link
                   href="/map?panel=post"
                   className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-slate-700"
@@ -188,9 +190,15 @@ export default function LandingPage() {
                       </span>
                       <span className="truncate text-sm font-semibold text-slate-900">{displayName}</span>
                     </div>
-                    <Link href="/map?panel=messages" onClick={() => setMobileOpen(false)} className="flex items-center gap-2.5 py-2.5 text-sm text-slate-700">
+                    <button
+                      onClick={() => {
+                        setMobileOpen(false)
+                        setMessagesOpen(true)
+                      }}
+                      className="flex items-center gap-2.5 py-2.5 text-left text-sm text-slate-700"
+                    >
                       <MessagesSquare className="h-4 w-4 text-slate-400" /> Messages
-                    </Link>
+                    </button>
                     <Link href="/map" onClick={() => setMobileOpen(false)} className="flex items-center gap-2.5 py-2.5 text-sm text-slate-700">
                       <Bell className="h-4 w-4 text-slate-400" /> Notifications
                     </Link>
@@ -600,6 +608,9 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* Messages slide-over — opens over the landing page itself, no map. */}
+      <MessagesPanel open={messagesOpen} onClose={() => setMessagesOpen(false)} />
     </div>
   )
 }

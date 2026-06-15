@@ -17,7 +17,7 @@ import {
   Sliders,
   Share2,
   Heart,
-  MessageSquare,
+  MessagesSquare,
   Plus,
   BarChart3,
   Bell,
@@ -815,7 +815,7 @@ export default function TopMenu({
                     </div>
                     <div className="flex gap-2.5 px-4 py-2.5 transition-colors hover:bg-slate-50">
                       <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600">
-                        <MessageSquare className="h-3.5 w-3.5" />
+                        <MessagesSquare className="h-3.5 w-3.5" />
                       </span>
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-slate-800">Host responded</p>
@@ -833,7 +833,7 @@ export default function TopMenu({
               className="relative flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
               title="Messages"
             >
-              <MessageSquare size={18} />
+              <MessagesSquare size={18} />
               {unreadCount > 0 && (
                 <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-semibold text-white ring-2 ring-white">
                   {unreadCount}
