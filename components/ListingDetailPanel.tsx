@@ -253,7 +253,12 @@ export default function ListingDetailPanel({
               </h3>
               <div className="flex items-center gap-2 text-sm text-gray-700 mb-2">
                 <UserIcon size={16} className="text-gray-400" />
-                {landlord?.name || landlord?.username || 'Subly user'}
+                <Link
+                  href={`/users/${listing.user_id}`}
+                  className="font-medium transition-colors hover:text-blue-600 hover:underline"
+                >
+                  {landlord?.name || landlord?.username || 'Subly user'}
+                </Link>
                 {landlord?.username && (
                   <span className="text-gray-400">@{landlord.username}</span>
                 )}

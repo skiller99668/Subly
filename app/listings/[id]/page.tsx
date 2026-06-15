@@ -382,16 +382,28 @@ export default function ListingPage() {
 
               {/* Host + contact */}
               <div className="mt-5 border-t border-slate-100 pt-4">
-                <div className="mb-3 flex items-center gap-2 text-sm text-slate-700">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 font-semibold text-white">
-                    {(landlord?.name || landlord?.username || 'U')
-                      .charAt(0)
-                      .toUpperCase()}
-                  </span>
+                <Link
+                  href={`/users/${listing.user_id}`}
+                  className="group mb-3 flex items-center gap-2 text-sm text-slate-700"
+                >
+                  {landlord?.avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={landlord.avatar_url}
+                      alt={landlord.name || landlord.username || 'Host'}
+                      className="h-9 w-9 shrink-0 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-500 font-semibold text-white">
+                      {(landlord?.name || landlord?.username || 'U')
+                        .charAt(0)
+                        .toUpperCase()}
+                    </span>
+                  )}
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <UserIcon size={14} className="text-slate-400" />
-                      <span className="truncate font-medium text-slate-800">
+                      <span className="truncate font-medium text-slate-800 transition-colors group-hover:text-blue-600 group-hover:underline">
                         {landlord?.name || landlord?.username || 'Subly user'}
                       </span>
                     </div>
@@ -401,7 +413,7 @@ export default function ListingPage() {
                       </span>
                     )}
                   </div>
-                </div>
+                </Link>
 
                 {landlord?.email && (
                   <a

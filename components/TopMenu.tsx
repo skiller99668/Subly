@@ -33,6 +33,7 @@ import {
   MapPin,
   ChevronDown,
   LogOut,
+  UserCircle,
 } from 'lucide-react'
 
 interface MenuState {
@@ -952,6 +953,15 @@ export default function TopMenu({
                         <p className="truncate text-xs text-slate-500">{user.email}</p>
                       )}
                     </div>
+                    <Link
+                      href={`/users/${user.id}`}
+                      onClick={() =>
+                        setMenu((prev) => ({ ...prev, accountMenuOpen: false }))
+                      }
+                      className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50"
+                    >
+                      <UserCircle size={16} className="text-slate-400" /> View profile
+                    </Link>
                     <button
                       onClick={() => {
                         onMyListings?.()

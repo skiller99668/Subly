@@ -22,6 +22,7 @@ import {
   ChevronDown,
   LogOut,
   Bell,
+  UserCircle,
 } from 'lucide-react'
 import { LISTING_TAGS } from '@/utils/listingTags'
 import { requestAndSaveLocation } from '@/utils/location'
@@ -640,6 +641,7 @@ function AccountMenu() {
     'Account'
 
   const items = [
+    { href: `/users/${user.id}`, icon: UserCircle, label: 'View profile' },
     { href: '/map', icon: MapIcon, label: 'Browse the map' },
     { href: '/map?panel=mine', icon: Building2, label: 'My listings' },
     { href: '/map?panel=saved', icon: Heart, label: 'Saved listings' },

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Send, Trash2, MessageCircle } from 'lucide-react'
 import { useAuth } from '@/app/providers'
 import { Comment } from '@/utils/supabase'
@@ -192,16 +193,21 @@ export default function ListingComments({ listingId }: ListingCommentsProps) {
             const isMine = user?.id === c.author_id
             return (
               <div key={c.id} className="group flex gap-2.5">
-                <Avatar
-                  name={c.author?.name}
-                  username={c.author?.username}
-                  url={c.author?.avatar_url}
-                />
+                <Link href={`/users/${c.author_id}`} className="shrink-0">
+                  <Avatar
+                    name={c.author?.name}
+                    username={c.author?.username}
+                    url={c.author?.avatar_url}
+                  />
+                </Link>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium text-gray-800">
+                    <Link
+                      href={`/users/${c.author_id}`}
+                      className="truncate text-sm font-medium text-gray-800 transition-colors hover:text-blue-600 hover:underline"
+                    >
                       {c.author?.name || c.author?.username || 'Subly user'}
-                    </span>
+                    </Link>
                     {isMine && (
                       <span className="shrink-0 text-xs text-gray-400">you</span>
                     )}

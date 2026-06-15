@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Star, Trash2 } from 'lucide-react'
 import { useAuth } from '@/app/providers'
 import { Review } from '@/utils/supabase'
@@ -173,8 +174,13 @@ export default function LandlordReviews({ subjectId, subjectName }: LandlordRevi
                 return (
                   <div key={r.id} className="rounded-lg border border-gray-100 p-3">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium text-gray-800 truncate">
-                        {r.author?.name || r.author?.username || 'Subly user'}
+                      <span className="truncate text-sm font-medium text-gray-800">
+                        <Link
+                          href={`/users/${r.author_id}`}
+                          className="transition-colors hover:text-blue-600 hover:underline"
+                        >
+                          {r.author?.name || r.author?.username || 'Subly user'}
+                        </Link>
                         {isMine && (
                           <span className="font-normal text-gray-400"> (you)</span>
                         )}
