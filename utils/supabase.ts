@@ -79,6 +79,17 @@ export interface Review {
   author?: User
 }
 
+// A public comment left by a user (author) on a specific listing.
+export interface Comment {
+  id: string
+  listing_id: string
+  author_id: string
+  content: string
+  created_at: string
+  updated_at?: string
+  author?: User
+}
+
 export interface Notification {
   id: string
   user_id: string

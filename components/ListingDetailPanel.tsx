@@ -18,6 +18,7 @@ import { Listing } from '@/utils/supabase'
 import { TAG_BY_ID } from '@/utils/listingTags'
 import ListingAddress from './ListingAddress'
 import LandlordReviews from './LandlordReviews'
+import ListingComments from './ListingComments'
 
 interface ListingDetailPanelProps {
   listing: Listing | null
@@ -308,6 +309,9 @@ export default function ListingDetailPanel({
               subjectId={listing.user_id}
               subjectName={landlord?.name || landlord?.username || 'this host'}
             />
+
+            {/* Listing discussion */}
+            <ListingComments listingId={listing.id} />
           </div>
         </div>
       </div>

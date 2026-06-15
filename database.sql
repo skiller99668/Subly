@@ -98,6 +98,17 @@ CREATE TABLE IF NOT EXISTS public.reviews (
   UNIQUE (subject_id, author_id)
 );
 
+-- Comments (public discussion thread beneath each listing — anyone signed in
+-- can post; authors can delete/edit their own).
+CREATE TABLE IF NOT EXISTS public.comments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  listing_id UUID NOT NULL REFERENCES public.listings(id) ON DELETE CASCADE,
+  author_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- =============================================================
 --  GRANTS — roles need table-level privileges before RLS is even
 --  evaluated. Access is still gated by the RLS policies below.
@@ -119,6 +130,7 @@ CREATE INDEX IF NOT EXISTS idx_messages_receiver ON public.messages(receiver_id)
 CREATE INDEX IF NOT EXISTS idx_favorites_user ON public.favorites(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON public.notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_subject ON public.reviews(subject_id);
+CREATE INDEX IF NOT EXISTS idx_comments_listing ON public.comments(listing_id);
 
 -- =============================================================
 --  ROW LEVEL SECURITY
@@ -129,6 +141,7 @@ ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.favorites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
 
 -- ---- Users ----
 DROP POLICY IF EXISTS "Users can read all users" ON public.users;
@@ -181,6 +194,16 @@ DROP POLICY IF EXISTS "Users can update own reviews" ON public.reviews;
 CREATE POLICY "Users can update own reviews" ON public.reviews FOR UPDATE USING (auth.uid() = author_id);
 DROP POLICY IF EXISTS "Users can delete own reviews" ON public.reviews;
 CREATE POLICY "Users can delete own reviews" ON public.reviews FOR DELETE USING (auth.uid() = author_id);
+
+-- ---- Comments (publicly readable; authors manage only their own) ----
+DROP POLICY IF EXISTS "Comments are visible to all" ON public.comments;
+CREATE POLICY "Comments are visible to all" ON public.comments FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Users can insert own comments" ON public.comments;
+CREATE POLICY "Users can insert own comments" ON public.comments FOR INSERT WITH CHECK (auth.uid() = author_id);
+DROP POLICY IF EXISTS "Users can update own comments" ON public.comments;
+CREATE POLICY "Users can update own comments" ON public.comments FOR UPDATE USING (auth.uid() = author_id);
+DROP POLICY IF EXISTS "Users can delete own comments" ON public.comments;
+CREATE POLICY "Users can delete own comments" ON public.comments FOR DELETE USING (auth.uid() = author_id);
 
 -- =============================================================
 --  AUTO-CREATE PROFILE ON SIGNUP
