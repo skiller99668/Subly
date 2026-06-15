@@ -203,6 +203,12 @@ export default function MessagesPanel({
         .eq('receiver_id', user.id)
         .eq('sender_id', otherId)
         .is('read_at', null)
+      // Clear the badge + bold immediately in local state without a refetch.
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.otherUser.id === otherId ? { ...c, unreadCount: 0 } : c
+        )
+      )
       onActivity?.()
     },
     [user, supabase, onActivity]

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/app/providers'
@@ -484,7 +485,7 @@ export default function TopMenu({
                   </span>
                 )}
               </button>
-              {menu.filtersOpen && (
+              {menu.filtersOpen && createPortal(
                 <div className="fixed top-16 bottom-0 left-0 z-[55] flex w-full flex-col bg-white shadow-2xl sm:w-96">
                   {/* Sidebar header */}
                   <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
@@ -781,7 +782,8 @@ export default function TopMenu({
                       Apply Filters
                     </button>
                   </div>
-                </div>
+                </div>,
+                document.body
               )}
             </div>
 
