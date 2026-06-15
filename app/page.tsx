@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   MapPin,
   Search,
@@ -19,8 +19,12 @@ import {
   Building2,
   Menu,
   X,
+  ChevronDown,
+  LogOut,
 } from 'lucide-react'
 import { LISTING_TAGS } from '@/utils/listingTags'
+import { requestAndSaveLocation } from '@/utils/location'
+import { useAuth } from '@/app/providers'
 
 const STEPS = [
   {
@@ -74,8 +78,23 @@ const FEATURES = [
 ]
 
 export default function LandingPage() {
+  const { user, signOut } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [query, setQuery] = useState('')
+
+  const displayName = user
+    ? ((user.user_metadata?.username as string) ||
+      (user.user_metadata?.name as string) ||
+      user.email ||
+      'Account')
+    : ''
+
+  // Ask for the visitor's location as they land, and stash it so the map can
+  // spawn right there. Fires once on mount; denial/unavailability is a no-op
+  // (the map simply falls back to its default view).
+  useEffect(() => {
+    requestAndSaveLocation()
+  }, [])
 
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900 antialiased">
@@ -102,18 +121,39 @@ export default function LandingPage() {
           </nav>
 
           <div className="hidden items-center gap-2 md:flex">
-            <Link
-              href="/auth"
-              className="rounded-lg px-3.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:text-slate-900"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/auth"
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-slate-700"
-            >
-              Post a sublease
-            </Link>
+            {user ? (
+              <>
+                <Link
+                  href="/map?panel=messages"
+                  title="Messages"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                >
+                  <MessagesSquare className="h-[18px] w-[18px]" />
+                </Link>
+                <Link
+                  href="/map"
+                  className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-slate-700"
+                >
+                  Post a sublease
+                </Link>
+                <AccountMenu />
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/auth"
+                  className="rounded-lg px-3.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:text-slate-900"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/auth"
+                  className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-slate-700"
+                >
+                  Post a sublease
+                </Link>
+              </>
+            )}
           </div>
 
           <button
@@ -137,13 +177,47 @@ export default function LandingPage() {
               <Link href="/map" onClick={() => setMobileOpen(false)} className="py-2.5 text-sm text-slate-700">
                 Browse listings
               </Link>
-              <div className="mt-3 flex flex-col gap-2 border-t border-slate-100 pt-4">
-                <Link href="/auth" className="rounded-lg border border-slate-200 px-4 py-2.5 text-center text-sm font-medium text-slate-700">
-                  Sign in
-                </Link>
-                <Link href="/auth" className="rounded-lg bg-slate-900 px-4 py-2.5 text-center text-sm font-medium text-white">
-                  Post a sublease
-                </Link>
+              <div className="mt-3 flex flex-col gap-1 border-t border-slate-100 pt-4">
+                {user ? (
+                  <>
+                    <div className="flex items-center gap-2.5 px-1 py-2">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-600 text-xs font-semibold text-white">
+                        {displayName.charAt(0).toUpperCase()}
+                      </span>
+                      <span className="truncate text-sm font-semibold text-slate-900">{displayName}</span>
+                    </div>
+                    <Link href="/map?panel=messages" onClick={() => setMobileOpen(false)} className="flex items-center gap-2.5 py-2.5 text-sm text-slate-700">
+                      <MessagesSquare className="h-4 w-4 text-slate-400" /> Messages
+                    </Link>
+                    <Link href="/map?panel=mine" onClick={() => setMobileOpen(false)} className="flex items-center gap-2.5 py-2.5 text-sm text-slate-700">
+                      <Building2 className="h-4 w-4 text-slate-400" /> My listings
+                    </Link>
+                    <Link href="/map?panel=saved" onClick={() => setMobileOpen(false)} className="flex items-center gap-2.5 py-2.5 text-sm text-slate-700">
+                      <Heart className="h-4 w-4 text-slate-400" /> Saved listings
+                    </Link>
+                    <Link href="/map" onClick={() => setMobileOpen(false)} className="mt-2 rounded-lg bg-slate-900 px-4 py-2.5 text-center text-sm font-medium text-white">
+                      Post a sublease
+                    </Link>
+                    <button
+                      onClick={async () => {
+                        setMobileOpen(false)
+                        await signOut()
+                      }}
+                      className="flex items-center gap-2.5 py-2.5 text-sm font-medium text-red-600"
+                    >
+                      <LogOut className="h-4 w-4" /> Sign out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/auth" className="rounded-lg border border-slate-200 px-4 py-2.5 text-center text-sm font-medium text-slate-700">
+                      Sign in
+                    </Link>
+                    <Link href="/auth" className="rounded-lg bg-slate-900 px-4 py-2.5 text-center text-sm font-medium text-white">
+                      Post a sublease
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -502,9 +576,15 @@ export default function LandingPage() {
               <a href="#categories" className="text-slate-600 transition-colors hover:text-slate-900">
                 Categories
               </a>
-              <Link href="/auth" className="text-slate-600 transition-colors hover:text-slate-900">
-                Sign in
-              </Link>
+              {user ? (
+                <Link href="/map?panel=mine" className="text-slate-600 transition-colors hover:text-slate-900">
+                  My listings
+                </Link>
+              ) : (
+                <Link href="/auth" className="text-slate-600 transition-colors hover:text-slate-900">
+                  Sign in
+                </Link>
+              )}
             </nav>
           </div>
 
@@ -515,6 +595,84 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+    </div>
+  )
+}
+
+// Signed-in profile dropdown for the landing header — mirrors the map's account
+// menu, but links into the map where listings/messages live.
+function AccountMenu() {
+  const { user, signOut } = useAuth()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [open])
+
+  if (!user) return null
+
+  const displayName =
+    (user.user_metadata?.username as string) ||
+    (user.user_metadata?.name as string) ||
+    user.email ||
+    'Account'
+
+  const items = [
+    { href: '/map', icon: MapIcon, label: 'Browse the map' },
+    { href: '/map?panel=mine', icon: Building2, label: 'My listings' },
+    { href: '/map?panel=saved', icon: Heart, label: 'Saved listings' },
+    { href: '/map?panel=messages', icon: MessagesSquare, label: 'Messages' },
+  ]
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white py-1.5 pl-1.5 pr-2.5 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300"
+      >
+        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-600 text-xs font-semibold text-white">
+          {displayName.charAt(0).toUpperCase()}
+        </span>
+        <span className="max-w-[8rem] truncate">{displayName}</span>
+        <ChevronDown
+          className={`h-4 w-4 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-12 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1.5 shadow-lg">
+          <div className="border-b border-slate-100 px-4 py-2.5">
+            <p className="truncate text-sm font-semibold text-slate-900">{displayName}</p>
+            {user.email && <p className="truncate text-xs text-slate-500">{user.email}</p>}
+          </div>
+          {items.map(({ href, icon: Icon, label }) => (
+            <Link
+              key={href}
+              href={href}
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50"
+            >
+              <Icon className="h-4 w-4 text-slate-400" /> {label}
+            </Link>
+          ))}
+          <div className="my-1 border-t border-slate-100" />
+          <button
+            onClick={async () => {
+              setOpen(false)
+              await signOut()
+            }}
+            className="flex w-full items-center gap-2.5 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+          >
+            <LogOut className="h-4 w-4" /> Sign out
+          </button>
+        </div>
+      )}
     </div>
   )
 }

@@ -16,6 +16,7 @@ import AreaListingsPanel from './AreaListingsPanel'
 import LocationListingsPanel, { ListingGroup } from './LocationListingsPanel'
 import { useAuth } from '@/app/providers'
 import { getSupabaseBrowserClient, Listing } from '@/utils/supabase'
+import { readLocation, saveLocation } from '@/utils/location'
 import {
   ListingFilters,
   EMPTY_FILTERS,
@@ -301,22 +302,28 @@ export default function MapComponent() {
     )
   }, [flyTo])
 
-  // Decide where to center the map — ONCE, on first load (after auth resolves):
-  //   • Not signed in  → stay on the default view.
-  //   • Signed in      → their current location (geolocation), falling back to
-  //     a saved profile location, then the default center.
+  // Decide where to center the map — ONCE, on first load (after auth resolves).
+  // Priority:
+  //   1. A location captured on the landing page (localStorage) → instant spawn
+  //      there, for signed-out visitors too.
+  //   2. A fresh GPS fix (also refreshes the stored location for next time).
+  //   3. Signed-in users only: their saved profile location.
+  //   4. Otherwise the default center (initial view state).
   // Guarded so it never re-centers on later user/auth changes (token refresh,
   // tab focus), which previously yanked the map back periodically.
   useEffect(() => {
     if (authLoading || hasCenteredRef.current) return
     hasCenteredRef.current = true
 
-    // Non-signed-in users just stay on the default view.
-    if (!user) return
+    // 1. Spawn immediately at the location captured when the visitor landed.
+    const stored = readLocation()
+    if (stored) {
+      setPendingCenter({ lng: stored.lng, lat: stored.lat, zoom: 14 })
+    }
 
-    // Fallback if geolocation is denied/unavailable: saved profile location,
-    // otherwise the default center (initial view state).
+    // 3. Fallback for signed-in users when there's no stored/fresh fix.
     const useFallback = async () => {
+      if (!user) return
       const { data } = await supabase
         .from('users')
         .select('location_lat, location_lng')
@@ -331,19 +338,26 @@ export default function MapComponent() {
       }
     }
 
-    // Primary: the user's current location — their spawn point on load.
+    // 2. Try a fresh GPS fix. Always refresh the stored location; only re-center
+    //    if we didn't already spawn at a stored one (avoids a double fly-to).
     if (typeof navigator !== 'undefined' && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (pos) =>
-          setPendingCenter({
-            lng: pos.coords.longitude,
-            lat: pos.coords.latitude,
-            zoom: 14,
-          }),
-        () => useFallback(),
+        (pos) => {
+          saveLocation(pos.coords.longitude, pos.coords.latitude)
+          if (!stored) {
+            setPendingCenter({
+              lng: pos.coords.longitude,
+              lat: pos.coords.latitude,
+              zoom: 14,
+            })
+          }
+        },
+        () => {
+          if (!stored) useFallback()
+        },
         { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
       )
-    } else {
+    } else if (!stored) {
       useFallback()
     }
   }, [authLoading, user, supabase])
@@ -354,6 +368,16 @@ export default function MapComponent() {
       flyTo(pendingCenter.lng, pendingCenter.lat, pendingCenter.zoom)
     }
   }, [pendingCenter, flyTo])
+
+  // Deep-link support: /map?panel=messages|saved|mine opens that panel on load,
+  // so the landing-page header (and other entry points) can jump straight in.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const panel = new URLSearchParams(window.location.search).get('panel')
+    if (panel === 'messages') setMessagesOpen(true)
+    else if (panel === 'saved') setSavedOpen(true)
+    else if (panel === 'mine') setMyListingsOpen(true)
+  }, [])
 
   // Manual city/area selection from the search bar: recenter and (if signed in)
   // persist it to the profile so it becomes the default next visit.
