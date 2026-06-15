@@ -12,6 +12,7 @@ import {
   SortBy,
   radiusToKm,
 } from '@/utils/filters'
+import { LISTING_TAGS } from '@/utils/listingTags'
 import {
   Search,
   Sliders,
@@ -81,6 +82,10 @@ interface TopMenuProps {
   onApplyFilters?: (filters: ListingFilters) => void
   // Number of active filter groups, for the button's count badge.
   activeFilterCount?: number
+  // Student attribute tag chips (moved into the Filters sidebar).
+  activeTags?: string[]
+  onToggleTag?: (id: string) => void
+  onClearTags?: () => void
 }
 
 const RECENTS_KEY = 'subly.recentSearches'
@@ -122,6 +127,9 @@ export default function TopMenu({
   getProximity,
   onApplyFilters,
   activeFilterCount = 0,
+  activeTags = [],
+  onToggleTag,
+  onClearTags,
 }: TopMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
   const { user, signOut } = useAuth()
@@ -294,6 +302,7 @@ export default function TopMenu({
     setNearQuery('')
     setNearResults([])
     onApplyFilters?.(EMPTY_FILTERS)
+    onClearTags?.()
   }
 
   // Switching units keeps the radius within the new unit's slider bounds.
@@ -337,17 +346,18 @@ export default function TopMenu({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        // Close all menus
-        setMenu({
+        // Close transient dropdowns, but keep the Filters slide-over open so
+        // the map and the rest of the UI stay fully interactive while it's up.
+        setMenu((prev) => ({
           searchOpen: false,
-          filtersOpen: false,
-          compareMode: false,
-          showFavoritesOnly: false,
-          listView: false,
+          filtersOpen: prev.filtersOpen,
+          compareMode: prev.compareMode,
+          showFavoritesOnly: prev.showFavoritesOnly,
+          listView: prev.listView,
           notificationsOpen: false,
           accountMenuOpen: false,
           savedSearchesOpen: false,
-        })
+        }))
       }
     }
 
@@ -468,22 +478,64 @@ export default function TopMenu({
               >
                 <Sliders size={18} />
                 <span className="text-sm font-medium">Filters</span>
-                {activeFilterCount > 0 && (
+                {activeFilterCount + activeTags.length > 0 && (
                   <span className="ml-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
-                    {activeFilterCount}
+                    {activeFilterCount + activeTags.length}
                   </span>
                 )}
               </button>
               {menu.filtersOpen && (
-                <div className="absolute top-12 left-0 w-96 bg-white border border-slate-200 rounded-lg shadow-lg p-4 max-h-96 overflow-y-auto">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-slate-800">Filters</h3>
-                    <button
-                      onClick={resetFilters}
-                      className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1"
-                    >
-                      <RotateCcw size={14} /> Reset
-                    </button>
+                <div className="fixed top-16 bottom-0 left-0 z-[55] flex w-full flex-col bg-white shadow-2xl sm:w-96">
+                  {/* Sidebar header */}
+                  <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                    <h3 className="text-lg font-semibold text-slate-900">Filters</h3>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={resetFilters}
+                        className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                      >
+                        <RotateCcw size={14} /> Reset
+                      </button>
+                      <button
+                        onClick={() =>
+                          setMenu((prev) => ({ ...prev, filtersOpen: false }))
+                        }
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                        aria-label="Close filters"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Scrollable filter body */}
+                  <div className="flex-1 overflow-y-auto px-5 py-4">
+                  {/* Tags */}
+                  <div className="mb-5">
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
+                      <Sliders size={16} /> Tags
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {LISTING_TAGS.map(({ id, label, icon: Icon }) => {
+                        const on = activeTags.includes(id)
+                        return (
+                          <button
+                            key={id}
+                            onClick={() => onToggleTag?.(id)}
+                            aria-pressed={on}
+                            title={label}
+                            className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                              on
+                                ? 'border-blue-600 bg-blue-600 text-white'
+                                : 'border-slate-300 text-slate-600 hover:border-slate-400 hover:bg-slate-50'
+                            }`}
+                          >
+                            <Icon size={14} />
+                            {label}
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
 
                   {/* Price Range */}
@@ -718,12 +770,17 @@ export default function TopMenu({
                     </select>
                   </div>
 
-                  <button
-                    onClick={applyFilters}
-                    className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium text-sm hover:bg-blue-700 transition"
-                  >
-                    Apply Filters
-                  </button>
+                  </div>
+
+                  {/* Sticky footer */}
+                  <div className="border-t border-slate-200 px-5 py-3">
+                    <button
+                      onClick={applyFilters}
+                      className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium text-sm hover:bg-blue-700 transition"
+                    >
+                      Apply Filters
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

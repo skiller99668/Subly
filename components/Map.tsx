@@ -6,7 +6,6 @@ import Supercluster from 'supercluster'
 import { MapPin, LocateFixed } from 'lucide-react'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import TopMenu from './TopMenu'
-import CategoryBar from './CategoryBar'
 import PostLeasePanel from './PostLeasePanel'
 import ListingDetailPanel from './ListingDetailPanel'
 import MyListingsPanel from './MyListingsPanel'
@@ -445,15 +444,13 @@ export default function MapComponent() {
         getProximity={getMapCenter}
         onApplyFilters={setAppliedFilters}
         activeFilterCount={countActiveFilters(appliedFilters)}
-      />
-      <CategoryBar
-        active={activeTags}
-        onToggle={(id) =>
+        activeTags={activeTags}
+        onToggleTag={(id) =>
           setActiveTags((prev) =>
             prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
           )
         }
-        onClear={() => setActiveTags([])}
+        onClearTags={() => setActiveTags([])}
       />
       <div className="w-full h-full pt-16">
         <Map
