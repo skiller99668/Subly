@@ -20,7 +20,6 @@ import {
   MessageSquare,
   Plus,
   BarChart3,
-  Menu,
   Bell,
   MapIcon,
   List,
@@ -29,8 +28,9 @@ import {
   Calendar,
   DollarSign,
   Ruler,
-  Home,
   MapPin,
+  ChevronDown,
+  LogOut,
 } from 'lucide-react'
 
 interface MenuState {
@@ -358,53 +358,58 @@ export default function TopMenu({
   return (
     <div ref={menuRef} className="absolute top-0 left-0 right-0 z-50">
       {/* Top Menu Bar */}
-      <div className="bg-white shadow-md">
-        <div className="flex items-center justify-between px-4 py-3 gap-4">
+      <div className="border-b border-slate-200/70 bg-white/85 backdrop-blur-md">
+        <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-5">
           {/* Left Side Menu Items */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             {/* Home */}
             <Link
               href="/"
-              className="p-2 hover:bg-gray-100 rounded-lg transition border-r border-gray-300 pr-3 mr-1"
+              className="mr-1 flex items-center gap-2 rounded-lg pr-2.5 transition-colors"
               title="Back to home"
             >
-              <Home size={20} className="text-gray-700" />
+              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-600">
+                <MapPin className="h-4 w-4 text-white" strokeWidth={2.5} />
+              </span>
+              <span className="hidden text-[17px] font-semibold tracking-tight text-slate-900 sm:inline">
+                Subly
+              </span>
             </Link>
 
             {/* Search */}
             <div className="relative">
               <button
                 onClick={() => toggleMenu('searchOpen')}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
                 title="Search"
               >
-                <Search size={20} className="text-gray-700" />
+                <Search size={18} />
               </button>
               {menu.searchOpen && (
-                <div className="absolute top-12 left-0 w-80 bg-white border border-gray-200 rounded-lg shadow-lg p-4">
+                <div className="absolute top-12 left-0 w-80 bg-white border border-slate-200 rounded-lg shadow-lg p-4">
                   <input
                     type="text"
                     placeholder="Find subleases in a city or area..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     autoFocus
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
 
                   {searchQuery.trim().length >= 3 ? (
                     /* Live geocoding results */
                     <div className="mt-3 space-y-1 max-h-48 overflow-y-auto">
                       {searching && (
-                        <div className="text-sm text-gray-400 p-2">Searching…</div>
+                        <div className="text-sm text-slate-400 p-2">Searching…</div>
                       )}
                       {!searching && searchResults.length === 0 && (
-                        <div className="text-sm text-gray-400 p-2">No matches found</div>
+                        <div className="text-sm text-slate-400 p-2">No matches found</div>
                       )}
                       {searchResults.map((result, i) => (
                         <button
                           key={`${result.lng},${result.lat},${i}`}
                           onClick={() => selectLocation(result)}
-                          className="w-full text-left text-sm text-gray-600 p-2 hover:bg-gray-50 rounded"
+                          className="w-full text-left text-sm text-slate-600 p-2 hover:bg-slate-50 rounded"
                         >
                           📍 {result.name}
                         </button>
@@ -415,12 +420,12 @@ export default function TopMenu({
                     recentSearches.length > 0 && (
                       <div className="mt-3">
                         <div className="flex items-center justify-between px-1 mb-1">
-                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
                             Recent
                           </span>
                           <button
                             onClick={clearRecents}
-                            className="text-xs text-gray-400 hover:text-red-500 transition"
+                            className="text-xs text-slate-400 hover:text-red-500 transition"
                           >
                             Clear all
                           </button>
@@ -429,18 +434,18 @@ export default function TopMenu({
                           {recentSearches.map((result, i) => (
                             <div
                               key={`${result.lng},${result.lat},${i}`}
-                              className="group flex items-center rounded hover:bg-gray-50"
+                              className="group flex items-center rounded hover:bg-slate-50"
                             >
                               <button
                                 onClick={() => selectLocation(result)}
-                                className="flex-1 text-left text-sm text-gray-600 p-2 truncate"
+                                className="flex-1 text-left text-sm text-slate-600 p-2 truncate"
                               >
                                 🕘 {result.name}
                               </button>
                               <button
                                 onClick={() => removeRecent(result.name)}
                                 aria-label={`Remove ${result.name}`}
-                                className="opacity-0 group-hover:opacity-100 p-2 text-gray-400 hover:text-red-500 transition"
+                                className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-500 transition"
                               >
                                 <X size={14} />
                               </button>
@@ -458,21 +463,21 @@ export default function TopMenu({
             <div className="relative">
               <button
                 onClick={() => toggleMenu('filtersOpen')}
-                className="p-2 hover:bg-gray-100 rounded-lg transition flex items-center gap-1"
+                className="flex items-center gap-1.5 rounded-lg px-2 py-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
                 title="Filters"
               >
-                <Sliders size={20} className="text-gray-700" />
-                <span className="text-sm font-medium text-gray-700">Filters</span>
+                <Sliders size={18} />
+                <span className="text-sm font-medium">Filters</span>
                 {activeFilterCount > 0 && (
-                  <span className="ml-0.5 bg-blue-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  <span className="ml-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
                     {activeFilterCount}
                   </span>
                 )}
               </button>
               {menu.filtersOpen && (
-                <div className="absolute top-12 left-0 w-96 bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-h-96 overflow-y-auto">
+                <div className="absolute top-12 left-0 w-96 bg-white border border-slate-200 rounded-lg shadow-lg p-4 max-h-96 overflow-y-auto">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-gray-800">Filters</h3>
+                    <h3 className="font-bold text-slate-800">Filters</h3>
                     <button
                       onClick={resetFilters}
                       className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1"
@@ -483,7 +488,7 @@ export default function TopMenu({
 
                   {/* Price Range */}
                   <div className="mb-4">
-                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
                       <DollarSign size={16} /> Price Range
                     </label>
                     <div className="flex gap-2">
@@ -497,7 +502,7 @@ export default function TopMenu({
                             minPrice: e.target.value === '' ? null : Number(e.target.value),
                           })
                         }
-                        className="w-1/2 px-2 py-1 border border-gray-300 rounded text-sm"
+                        className="w-1/2 px-2 py-1 border border-slate-300 rounded text-sm"
                       />
                       <input
                         type="number"
@@ -509,14 +514,14 @@ export default function TopMenu({
                             maxPrice: e.target.value === '' ? null : Number(e.target.value),
                           })
                         }
-                        className="w-1/2 px-2 py-1 border border-gray-300 rounded text-sm"
+                        className="w-1/2 px-2 py-1 border border-slate-300 rounded text-sm"
                       />
                     </div>
                   </div>
 
                   {/* Size Range */}
                   <div className="mb-4">
-                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
                       <Ruler size={16} /> Size (sq ft)
                     </label>
                     <div className="flex gap-2">
@@ -530,7 +535,7 @@ export default function TopMenu({
                             minSize: e.target.value === '' ? null : Number(e.target.value),
                           })
                         }
-                        className="w-1/2 px-2 py-1 border border-gray-300 rounded text-sm"
+                        className="w-1/2 px-2 py-1 border border-slate-300 rounded text-sm"
                       />
                       <input
                         type="number"
@@ -542,14 +547,14 @@ export default function TopMenu({
                             maxSize: e.target.value === '' ? null : Number(e.target.value),
                           })
                         }
-                        className="w-1/2 px-2 py-1 border border-gray-300 rounded text-sm"
+                        className="w-1/2 px-2 py-1 border border-slate-300 rounded text-sm"
                       />
                     </div>
                   </div>
 
                   {/* Proximity to a location */}
                   <div className="mb-4">
-                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
                       <MapPin size={16} /> Near a location
                     </label>
 
@@ -573,15 +578,15 @@ export default function TopMenu({
                           placeholder="Search a campus, address, or area…"
                           value={nearQuery}
                           onChange={(e) => setNearQuery(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         {nearQuery.trim().length >= 3 && (
-                          <div className="mt-1 border border-gray-200 rounded-lg max-h-40 overflow-y-auto">
+                          <div className="mt-1 border border-slate-200 rounded-lg max-h-40 overflow-y-auto">
                             {nearSearching && (
-                              <div className="text-sm text-gray-400 p-2">Searching…</div>
+                              <div className="text-sm text-slate-400 p-2">Searching…</div>
                             )}
                             {!nearSearching && nearResults.length === 0 && (
-                              <div className="text-sm text-gray-400 p-2">
+                              <div className="text-sm text-slate-400 p-2">
                                 No matches found
                               </div>
                             )}
@@ -589,7 +594,7 @@ export default function TopMenu({
                               <button
                                 key={`${result.lng},${result.lat},${i}`}
                                 onClick={() => selectNear(result)}
-                                className="w-full text-left text-sm text-gray-600 p-2 hover:bg-gray-50"
+                                className="w-full text-left text-sm text-slate-600 p-2 hover:bg-slate-50"
                               >
                                 📍 {result.name}
                               </button>
@@ -619,7 +624,7 @@ export default function TopMenu({
                             className={`flex-1 text-xs py-1 rounded border transition ${
                               filters.radiusUnit === unit
                                 ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
-                                : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                                : 'border-slate-300 text-slate-600 hover:border-slate-400'
                             }`}
                           >
                             {RADIUS_CONFIG[unit].label}
@@ -637,7 +642,7 @@ export default function TopMenu({
                         }
                         className="w-full"
                       />
-                      <div className="text-xs text-gray-600 mt-1">
+                      <div className="text-xs text-slate-600 mt-1">
                         {filters.near
                           ? `Within ${filters.radius} ${
                               RADIUS_CONFIG[filters.radiusUnit].label
@@ -652,7 +657,7 @@ export default function TopMenu({
                           : 'Pick a location to filter by distance'}
                       </div>
                       {filters.radiusUnit === 'walk' && filters.near && (
-                        <div className="text-[11px] text-gray-400 mt-0.5">
+                        <div className="text-[11px] text-slate-400 mt-0.5">
                           Walk time is estimated from distance.
                         </div>
                       )}
@@ -661,7 +666,7 @@ export default function TopMenu({
 
                   {/* Move-in Date */}
                   <div className="mb-4">
-                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
                       <Calendar size={16} /> Move-in Date Range
                     </label>
                     <div className="flex gap-2">
@@ -674,7 +679,7 @@ export default function TopMenu({
                             moveInDateStart: e.target.value,
                           })
                         }
-                        className="w-1/2 px-2 py-1 border border-gray-300 rounded text-sm"
+                        className="w-1/2 px-2 py-1 border border-slate-300 rounded text-sm"
                       />
                       <input
                         type="date"
@@ -685,14 +690,14 @@ export default function TopMenu({
                             moveInDateEnd: e.target.value,
                           })
                         }
-                        className="w-1/2 px-2 py-1 border border-gray-300 rounded text-sm"
+                        className="w-1/2 px-2 py-1 border border-slate-300 rounded text-sm"
                       />
                     </div>
                   </div>
 
                   {/* Sort By */}
                   <div className="mb-4">
-                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
                       <BarChart3 size={16} /> Sort By
                     </label>
                     <select
@@ -703,7 +708,7 @@ export default function TopMenu({
                           sortBy: e.target.value as Filters['sortBy'],
                         })
                       }
-                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                      className="w-full px-2 py-1 border border-slate-300 rounded text-sm"
                     >
                       <option value="newest">Newest Posted</option>
                       <option value="price-low">Price: Low to High</option>
@@ -715,7 +720,7 @@ export default function TopMenu({
 
                   <button
                     onClick={applyFilters}
-                    className="w-full bg-blue-500 text-white py-2 rounded-lg font-medium text-sm hover:bg-blue-600 transition"
+                    className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium text-sm hover:bg-blue-700 transition"
                   >
                     Apply Filters
                   </button>
@@ -726,15 +731,14 @@ export default function TopMenu({
             {/* Compare */}
             <button
               onClick={() => toggleMenu('compareMode')}
-              className={`p-2 hover:bg-gray-100 rounded-lg transition flex items-center gap-1 ${
-                menu.compareMode ? 'bg-blue-100' : ''
+              className={`flex h-9 items-center justify-center gap-1 rounded-lg px-2 transition-colors ${
+                menu.compareMode
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
               title="Compare listings"
             >
-              <Share2
-                size={20}
-                className={menu.compareMode ? 'text-blue-600' : 'text-gray-700'}
-              />
+              <Share2 size={18} />
               {compareCount > 0 && (
                 <span className="text-xs font-bold text-blue-600">{compareCount}</span>
               )}
@@ -743,47 +747,42 @@ export default function TopMenu({
             {/* Favorites */}
             <button
               onClick={() => onToggleFavoritesOnly?.()}
-              className={`p-2 hover:bg-gray-100 rounded-lg transition ${
-                favoritesOnly ? 'bg-red-100' : ''
+              className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
+                favoritesOnly
+                  ? 'bg-red-50 text-red-600'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
               title="Show favorites only"
             >
-              <Heart
-                size={20}
-                className={favoritesOnly ? 'text-red-600 fill-red-600' : 'text-gray-700'}
-              />
+              <Heart size={18} className={favoritesOnly ? 'fill-red-600' : ''} />
             </button>
 
             {/* View Toggle (List/Map) */}
-            <div className="border-l border-gray-300 pl-2 flex gap-1">
+            <div className="ml-1 flex gap-1 border-l border-slate-200 pl-2">
               <button
                 onClick={() => setMenu({ ...menu, listView: false })}
-                className={`p-2 rounded-lg transition ${
-                  !menu.listView ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-700'
+                className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
+                  !menu.listView
+                    ? 'bg-blue-50 text-blue-600'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
                 title="Map view"
               >
-                <MapIcon size={20} />
+                <MapIcon size={18} />
               </button>
               <button
                 onClick={() => setMenu({ ...menu, listView: true })}
-                className={`p-2 rounded-lg transition ${
-                  menu.listView ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-700'
+                className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
+                  menu.listView
+                    ? 'bg-blue-50 text-blue-600'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
                 title="List view"
               >
-                <List size={20} />
+                <List size={18} />
               </button>
             </div>
           </div>
-
-          {/* Logo/Brand (Center) */}
-          <Link
-            href="/"
-            className="text-center font-bold text-lg text-blue-600 hover:text-blue-700 transition"
-          >
-            Subly
-          </Link>
 
           {/* Right Side Menu Items */}
           <div className="flex items-center gap-2">
@@ -791,27 +790,37 @@ export default function TopMenu({
             <div className="relative">
               <button
                 onClick={() => toggleMenu('notificationsOpen')}
-                className="p-2 hover:bg-gray-100 rounded-lg transition relative"
+                className="relative flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
                 title="Notifications"
               >
-                <Bell size={20} className="text-gray-700" />
+                <Bell size={18} />
                 {notifications > 0 && (
-                  <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {notifications}
-                  </span>
+                  <span className="absolute right-1.5 top-1.5 flex h-2 w-2 rounded-full bg-blue-500 ring-2 ring-white" />
                 )}
               </button>
               {menu.notificationsOpen && (
-                <div className="absolute top-12 right-0 w-80 bg-white border border-gray-200 rounded-lg shadow-lg p-4">
-                  <h3 className="font-bold mb-3 text-gray-800">Notifications</h3>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    <div className="text-sm p-2 bg-blue-50 rounded cursor-pointer hover:bg-blue-100">
-                      <p className="font-medium">New matching listing</p>
-                      <p className="text-xs text-gray-600">2-bed near campus posted 1h ago</p>
+                <div className="absolute top-12 right-0 w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                  <div className="border-b border-slate-100 px-4 py-3">
+                    <h3 className="text-sm font-semibold text-slate-900">Notifications</h3>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto py-1.5">
+                    <div className="flex gap-2.5 px-4 py-2.5 transition-colors hover:bg-slate-50">
+                      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600">
+                        <Bell className="h-3.5 w-3.5" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-800">New matching listing</p>
+                        <p className="text-xs text-slate-500">A room near campus was posted 1h ago</p>
+                      </div>
                     </div>
-                    <div className="text-sm p-2 bg-blue-50 rounded cursor-pointer hover:bg-blue-100">
-                      <p className="font-medium">Landlord responded</p>
-                      <p className="text-xs text-gray-600">Your inquiry about listing #234</p>
+                    <div className="flex gap-2.5 px-4 py-2.5 transition-colors hover:bg-slate-50">
+                      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600">
+                        <MessageSquare className="h-3.5 w-3.5" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-800">Host responded</p>
+                        <p className="text-xs text-slate-500">Reply to your inquiry about a listing</p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -821,30 +830,30 @@ export default function TopMenu({
             {/* Messages */}
             <button
               onClick={() => onMessages?.()}
-              className="p-2 hover:bg-gray-100 rounded-lg transition relative"
+              className="relative flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
               title="Messages"
             >
-              <MessageSquare size={20} className="text-gray-700" />
+              <MessageSquare size={18} />
               {unreadCount > 0 && (
-                <span className="absolute top-0 right-0 bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-semibold text-white ring-2 ring-white">
                   {unreadCount}
                 </span>
               )}
             </button>
 
             {/* Post a Lease Button */}
-            <button 
+            <button
               onClick={handlePostLease}
-              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition flex items-center gap-2 font-medium"
+              className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-slate-700"
             >
-              <Plus size={20} /> Post a Lease
+              <Plus size={18} /> <span className="hidden sm:inline">Post a Lease</span>
             </button>
 
             {/* Login/Account Button */}
             {!user ? (
               <button
                 onClick={() => router.push('/auth')}
-                className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-medium"
+                className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
               >
                 Sign In
               </button>
@@ -852,52 +861,66 @@ export default function TopMenu({
               <div className="relative">
                 <button
                   onClick={() => toggleMenu('accountMenuOpen')}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition"
+                  className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white py-1.5 pl-1.5 pr-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300"
                   title="Account"
                 >
-                  <Menu size={20} className="text-gray-700" />
+                  <span className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-600 text-xs font-semibold text-white">
+                    {(
+                      user.user_metadata?.username ||
+                      user.user_metadata?.name ||
+                      user.email ||
+                      'U'
+                    )
+                      .charAt(0)
+                      .toUpperCase()}
+                  </span>
+                  <ChevronDown
+                    size={16}
+                    className={`text-slate-400 transition-transform ${
+                      menu.accountMenuOpen ? 'rotate-180' : ''
+                    }`}
+                  />
                 </button>
                 {menu.accountMenuOpen && (
-                  <div className="absolute top-12 right-0 w-56 bg-white border border-gray-200 rounded-lg shadow-lg p-2">
-                    <div className="px-4 py-2 text-sm font-semibold text-gray-700 border-b mb-2">
-                      👤 {user.user_metadata?.username ||
-                        user.user_metadata?.name ||
-                        user.email}
+                  <div className="absolute top-12 right-0 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1.5 shadow-lg">
+                    <div className="border-b border-slate-100 px-4 py-2.5">
+                      <p className="truncate text-sm font-semibold text-slate-900">
+                        {user.user_metadata?.username ||
+                          user.user_metadata?.name ||
+                          user.email}
+                      </p>
+                      {user.email && (
+                        <p className="truncate text-xs text-slate-500">{user.email}</p>
+                      )}
                     </div>
                     <button
                       onClick={() => {
                         onMyListings?.()
                         setMenu((prev) => ({ ...prev, accountMenuOpen: false }))
                       }}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded"
+                      className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50"
                     >
-                      📋 My Listings
+                      <List size={16} className="text-slate-400" /> My listings
                     </button>
                     <button
                       onClick={() => {
                         onSavedSearches?.()
                         setMenu((prev) => ({ ...prev, accountMenuOpen: false }))
                       }}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded"
+                      className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50"
                     >
-                      ❤️ Saved Listings
+                      <Heart size={16} className="text-slate-400" /> Saved listings
                     </button>
-                    <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded">
-                      ⚙️ Settings
-                    </button>
-                    <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded">
-                      ❓ Help & Support
-                    </button>
-                    <hr className="my-2" />
+                    <div className="my-1 border-t border-slate-100" />
                     <button
                       onClick={async () => {
                         await signOut()
-                        router.push("/")
+                        router.push('/')
                         router.refresh()
                       }}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded text-red-600"
+                      className="flex w-full items-center gap-2.5 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
                     >
-                      🚪 Logout
+                      <LogOut size={16} /> Sign out
                     </button>
                   </div>
                 )}

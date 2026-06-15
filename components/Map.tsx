@@ -369,14 +369,18 @@ export default function MapComponent() {
     }
   }, [pendingCenter, flyTo])
 
-  // Deep-link support: /map?panel=messages|saved|mine opens that panel on load,
-  // so the landing-page header (and other entry points) can jump straight in.
+  // Deep-link support: /map?panel=messages|saved|mine|post opens that panel on
+  // load, so the landing-page header (and other entry points) can jump in.
   useEffect(() => {
     if (typeof window === 'undefined') return
     const panel = new URLSearchParams(window.location.search).get('panel')
     if (panel === 'messages') setMessagesOpen(true)
     else if (panel === 'saved') setSavedOpen(true)
     else if (panel === 'mine') setMyListingsOpen(true)
+    else if (panel === 'post') {
+      setEditingListing(null)
+      setPostOpen(true)
+    }
   }, [])
 
   // Manual city/area selection from the search bar: recenter and (if signed in)
