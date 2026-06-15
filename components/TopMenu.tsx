@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/app/providers'
 import { geocodePlaces, GeoResult } from '@/utils/geocode'
@@ -21,6 +22,7 @@ import {
   Calendar,
   DollarSign,
   Ruler,
+  Home,
 } from 'lucide-react'
 
 interface MenuState {
@@ -258,6 +260,15 @@ export default function TopMenu({
         <div className="flex items-center justify-between px-4 py-3 gap-4">
           {/* Left Side Menu Items */}
           <div className="flex items-center gap-2">
+            {/* Home */}
+            <Link
+              href="/"
+              className="p-2 hover:bg-gray-100 rounded-lg transition border-r border-gray-300 pr-3 mr-1"
+              title="Back to home"
+            >
+              <Home size={20} className="text-gray-700" />
+            </Link>
+
             {/* Search */}
             <div className="relative">
               <button
@@ -557,7 +568,12 @@ export default function TopMenu({
           </div>
 
           {/* Logo/Brand (Center) */}
-          <div className="text-center font-bold text-lg text-blue-600">Subly</div>
+          <Link
+            href="/"
+            className="text-center font-bold text-lg text-blue-600 hover:text-blue-700 transition"
+          >
+            Subly
+          </Link>
 
           {/* Right Side Menu Items */}
           <div className="flex items-center gap-2">
