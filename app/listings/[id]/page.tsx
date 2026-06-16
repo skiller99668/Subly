@@ -20,7 +20,7 @@ import { useAuth } from '@/app/providers'
 import { getSupabaseBrowserClient, Listing } from '@/utils/supabase'
 import { TAG_BY_ID } from '@/utils/listingTags'
 import ListingAddress from '@/components/ListingAddress'
-import LandlordReviews from '@/components/LandlordReviews'
+import PropertyReviews from '@/components/PropertyReviews'
 import ListingComments from '@/components/ListingComments'
 
 // Full-screen listing page — the same information as the slide-over detail
@@ -342,11 +342,8 @@ export default function ListingPage() {
               </p>
             </section>
 
-            {/* Reviews + comments reuse the shared, self-contained sections */}
-            <LandlordReviews
-              subjectId={listing.user_id}
-              subjectName={landlord?.name || landlord?.username || 'this host'}
-            />
+            {/* Property reviews + comments */}
+            <PropertyReviews listingId={listing.id} />
             <ListingComments listingId={listing.id} />
           </div>
 

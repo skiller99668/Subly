@@ -12,12 +12,14 @@ interface LandlordReviewsProps {
   subjectId: string
   /** Display name, used in the composer placeholder. */
   subjectName: string
+  /** When true, immediately opens the review composer on mount. */
+  autoOpen?: boolean
 }
 
 // Host review section: aggregate rating, a write/edit composer (signed-in
 // users who aren't the host), and the list of reviews. Self-contained — it
 // fetches its own data from /api/reviews and refreshes after writes.
-export default function LandlordReviews({ subjectId, subjectName }: LandlordReviewsProps) {
+export default function LandlordReviews({ subjectId, subjectName, autoOpen = false }: LandlordReviewsProps) {
   const { user } = useAuth()
   const isOwn = user?.id === subjectId
 
@@ -57,11 +59,19 @@ export default function LandlordReviews({ subjectId, subjectName }: LandlordRevi
 
   // Prefill the composer with the user's existing review when editing.
   const startComposing = () => {
-    setRating(mine?.rating ?? 0)
-    setComment(mine?.comment ?? '')
+    setRating(0)
+    setComment('')
     setError('')
     setComposing(true)
   }
+
+  // Auto-open the composer when the parent requests it (e.g. "Leave a review" button).
+  useEffect(() => {
+    if (autoOpen && !loading && user && !isOwn) {
+      startComposing()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpen, loading, user, isOwn])
 
   const submit = async () => {
     if (rating < 1) {
@@ -108,7 +118,7 @@ export default function LandlordReviews({ subjectId, subjectName }: LandlordRevi
   return (
     <div className="border-t pt-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-700">Host reviews</h3>
+        <h3 className="text-sm font-semibold text-gray-700">Landlord &amp; roommate reviews</h3>
         {count > 0 && (
           <div className="flex items-center gap-1.5">
             <StarRating value={average} size={15} />
@@ -160,7 +170,7 @@ export default function LandlordReviews({ subjectId, subjectName }: LandlordRevi
               onClick={startComposing}
               className="mb-4 flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700"
             >
-              <Star size={16} /> {mine ? 'Edit your review' : 'Write a review'}
+              <Star size={16} /> Leave a review
             </button>
           )}
 

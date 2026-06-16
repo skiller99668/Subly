@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   Loader2,
   Building2,
+  Star,
 } from 'lucide-react'
 import { useAuth } from '@/app/providers'
 import { Listing, User } from '@/utils/supabase'
@@ -30,6 +31,9 @@ export default function ProfilePage() {
   const [listings, setListings] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
   const [missing, setMissing] = useState(false)
+
+  const reviewsSectionRef = useRef<HTMLElement>(null)
+  const [reviewOpen, setReviewOpen] = useState(false)
 
   // Message composer state.
   const [composing, setComposing] = useState(false)
@@ -297,6 +301,22 @@ export default function ProfilePage() {
                       <Mail size={16} /> Email
                     </a>
                   )}
+                  {me && (
+                    <button
+                      onClick={() => {
+                        setReviewOpen(true)
+                        setTimeout(() => {
+                          reviewsSectionRef.current?.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start',
+                          })
+                        }, 50)
+                      }}
+                      className="flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                    >
+                      <Star size={16} /> Leave a review
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -324,8 +344,15 @@ export default function ProfilePage() {
         </section>
 
         {/* Reviews — reuse the shared, self-contained section */}
-        <section className="mt-10 rounded-2xl border border-slate-200 p-6 shadow-sm sm:p-8">
-          <LandlordReviews subjectId={profile.id} subjectName={displayName} />
+        <section
+          ref={reviewsSectionRef}
+          className="mt-10 rounded-2xl border border-slate-200 p-6 shadow-sm sm:p-8"
+        >
+          <LandlordReviews
+            subjectId={profile.id}
+            subjectName={displayName}
+            autoOpen={reviewOpen}
+          />
         </section>
       </main>
     </div>

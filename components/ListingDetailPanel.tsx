@@ -19,7 +19,7 @@ import { useAuth } from '@/app/providers'
 import { Listing } from '@/utils/supabase'
 import { TAG_BY_ID } from '@/utils/listingTags'
 import ListingAddress from './ListingAddress'
-import LandlordReviews from './LandlordReviews'
+import PropertyReviews from './PropertyReviews'
 import ListingComments from './ListingComments'
 
 interface ListingDetailPanelProps {
@@ -319,11 +319,8 @@ export default function ListingDetailPanel({
               )}
             </div>
 
-            {/* Host / landlord reviews */}
-            <LandlordReviews
-              subjectId={listing.user_id}
-              subjectName={landlord?.name || landlord?.username || 'this host'}
-            />
+            {/* Property reviews */}
+            <PropertyReviews listingId={listing.id} />
 
             {/* Listing discussion */}
             <ListingComments listingId={listing.id} />
