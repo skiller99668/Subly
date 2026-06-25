@@ -41,7 +41,6 @@ interface MenuState {
   filtersOpen: boolean
   compareMode: boolean
   showFavoritesOnly: boolean
-  listView: boolean
   notificationsOpen: boolean
   accountMenuOpen: boolean
   savedSearchesOpen: boolean
@@ -77,6 +76,9 @@ interface TopMenuProps {
   onSavedSearches?: () => void
   onToggleFavoritesOnly?: () => void
   favoritesOnly?: boolean
+  // Map/List view mode, lifted to the parent so the list can render over the map.
+  listView?: boolean
+  onListViewChange?: (listView: boolean) => void
   unreadCount?: number
   // Returns the current map center so suggestions can be sorted by proximity.
   getProximity?: () => { lng: number; lat: number } | undefined
@@ -125,6 +127,8 @@ export default function TopMenu({
   onSavedSearches,
   onToggleFavoritesOnly,
   favoritesOnly = false,
+  listView = false,
+  onListViewChange,
   unreadCount = 0,
   getProximity,
   onApplyFilters,
@@ -141,7 +145,6 @@ export default function TopMenu({
     filtersOpen: false,
     compareMode: false,
     showFavoritesOnly: false,
-    listView: false,
     notificationsOpen: false,
     accountMenuOpen: false,
     savedSearchesOpen: false,
@@ -355,7 +358,6 @@ export default function TopMenu({
           filtersOpen: prev.filtersOpen,
           compareMode: prev.compareMode,
           showFavoritesOnly: prev.showFavoritesOnly,
-          listView: prev.listView,
           notificationsOpen: false,
           accountMenuOpen: false,
           savedSearchesOpen: false,
@@ -820,9 +822,10 @@ export default function TopMenu({
             {/* View Toggle (List/Map) */}
             <div className="ml-1 flex gap-1 border-l border-slate-200 pl-2">
               <button
-                onClick={() => setMenu({ ...menu, listView: false })}
+                onClick={() => onListViewChange?.(false)}
+                aria-pressed={!listView}
                 className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
-                  !menu.listView
+                  !listView
                     ? 'bg-blue-50 text-blue-600'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
@@ -831,9 +834,10 @@ export default function TopMenu({
                 <MapIcon size={18} />
               </button>
               <button
-                onClick={() => setMenu({ ...menu, listView: true })}
+                onClick={() => onListViewChange?.(true)}
+                aria-pressed={listView}
                 className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
-                  menu.listView
+                  listView
                     ? 'bg-blue-50 text-blue-600'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}

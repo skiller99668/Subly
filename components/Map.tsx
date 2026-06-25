@@ -13,6 +13,7 @@ import SavedListingsPanel from './SavedListingsPanel'
 import MessagesPanel from './MessagesPanel'
 import AreaListingsPanel from './AreaListingsPanel'
 import LocationListingsPanel, { ListingGroup } from './LocationListingsPanel'
+import ListingsListView from './ListingsListView'
 import { useAuth } from '@/app/providers'
 import { getSupabaseBrowserClient, Listing } from '@/utils/supabase'
 import { readLocation, saveLocation } from '@/utils/location'
@@ -60,6 +61,8 @@ export default function MapComponent() {
   const [favorites, setFavorites] = useState<Set<string>>(new Set())
   const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [savedOpen, setSavedOpen] = useState(false)
+  // Map vs. List view mode (toggled from the top menu).
+  const [listView, setListView] = useState(false)
   // Active student-attribute category filters (AND semantics).
   const [activeTags, setActiveTags] = useState<string[]>([])
   // Applied price/size/date/proximity filters from the top-menu Filters panel.
@@ -108,6 +111,13 @@ export default function MapComponent() {
     }
     return result
   }, [listings, appliedFilters, favoritesOnly, favorites, activeTags])
+
+  // The same visible listings, ordered by the active sort — for the List view.
+  // Distance sort keys off the current map center.
+  const sortedVisible = useMemo(
+    () => sortListings(visibleListings, appliedFilters.sortBy, mapRef.current?.getCenter()),
+    [visibleListings, appliedFilters.sortBy]
+  )
 
   // Listings near the searched place for the left panel: the active filters
   // also apply here, then the area radius, then the chosen sort order.
@@ -436,6 +446,8 @@ export default function MapComponent() {
         onSavedSearches={() => setSavedOpen(true)}
         onToggleFavoritesOnly={() => setFavoritesOnly((v) => !v)}
         favoritesOnly={favoritesOnly}
+        listView={listView}
+        onListViewChange={setListView}
         onSearchClose={() => {
           // Keep the pin if a search result panel is open; clear stray pins otherwise.
           if (!areaSearch) setSearchedPin(null)
@@ -584,6 +596,14 @@ export default function MapComponent() {
           <LocateFixed size={20} className="text-gray-700" />
         </button>
       </div>
+
+      <ListingsListView
+        open={listView}
+        listings={sortedVisible}
+        favorites={favorites}
+        onToggleFavorite={toggleFavorite}
+        onSelect={(listing) => setDetailListing(listing)}
+      />
 
       <MyListingsPanel
         open={myListingsOpen}
