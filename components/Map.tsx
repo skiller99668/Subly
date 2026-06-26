@@ -63,6 +63,8 @@ export default function MapComponent() {
   const [savedOpen, setSavedOpen] = useState(false)
   // Map vs. List view mode (toggled from the top menu).
   const [listView, setListView] = useState(false)
+  // Whether the left Filters sidebar is open, so the list view can make room.
+  const [filtersOpen, setFiltersOpen] = useState(false)
   // Active student-attribute category filters (AND semantics).
   const [activeTags, setActiveTags] = useState<string[]>([])
   // Applied price/size/date/proximity filters from the top-menu Filters panel.
@@ -455,6 +457,7 @@ export default function MapComponent() {
         unreadCount={unreadTotal}
         getProximity={getMapCenter}
         onApplyFilters={setAppliedFilters}
+        onFiltersOpenChange={setFiltersOpen}
         activeFilterCount={countActiveFilters(appliedFilters)}
         activeTags={activeTags}
         onToggleTag={(id) =>
@@ -603,6 +606,7 @@ export default function MapComponent() {
         favorites={favorites}
         onToggleFavorite={toggleFavorite}
         onSelect={(listing) => setDetailListing(listing)}
+        sidebarOpen={filtersOpen}
       />
 
       <MyListingsPanel

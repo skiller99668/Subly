@@ -16,6 +16,9 @@ interface ListingsListViewProps {
   favorites: Set<string>
   onToggleFavorite: (id: string) => void
   onSelect: (listing: Listing) => void
+  // When the left Filters sidebar is open, shrink so its content stays visible
+  // beside the sidebar (≥sm) instead of hiding behind it.
+  sidebarOpen?: boolean
 }
 
 const LAYOUT_KEY = 'subly.listLayout'
@@ -221,6 +224,7 @@ export default function ListingsListView({
   favorites,
   onToggleFavorite,
   onSelect,
+  sidebarOpen = false,
 }: ListingsListViewProps) {
   const [layout, setLayout] = useState<Layout>('grid')
 
@@ -263,7 +267,11 @@ export default function ListingsListView({
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-0 top-16 z-40 overflow-y-auto bg-slate-50">
+    <div
+      className={`fixed bottom-0 left-0 right-0 top-16 z-40 overflow-y-auto bg-slate-50 transition-[left] duration-200 motion-reduce:transition-none ${
+        sidebarOpen ? 'sm:left-96' : ''
+      }`}
+    >
       <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6">
         {/* Header: count + layout toggle */}
         <div className="mb-4 flex items-center justify-between gap-3">

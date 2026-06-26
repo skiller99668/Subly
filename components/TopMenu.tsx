@@ -84,6 +84,9 @@ interface TopMenuProps {
   getProximity?: () => { lng: number; lat: number } | undefined
   // Push the applied price/size/date/proximity filters up to the map.
   onApplyFilters?: (filters: ListingFilters) => void
+  // Notify the parent whenever the Filters sidebar opens/closes, so other
+  // surfaces (e.g. the list view) can make room for it.
+  onFiltersOpenChange?: (open: boolean) => void
   // Number of active filter groups, for the button's count badge.
   activeFilterCount?: number
   // Student attribute tag chips (moved into the Filters sidebar).
@@ -133,6 +136,7 @@ export default function TopMenu({
   getProximity,
   onApplyFilters,
   activeFilterCount = 0,
+  onFiltersOpenChange,
   activeTags = [],
   onToggleTag,
   onClearTags,
@@ -186,6 +190,11 @@ export default function TopMenu({
     }
     prevSearchOpen.current = menu.searchOpen
   }, [menu.searchOpen, onSearchClose])
+  // Let the parent react to the Filters sidebar opening/closing.
+  useEffect(() => {
+    onFiltersOpenChange?.(menu.filtersOpen)
+  }, [menu.filtersOpen, onFiltersOpenChange])
+
   // Placeholder counters until compare/messages/notifications are wired up.
   const [compareCount] = useState(0)
   const [notifications] = useState(2)
