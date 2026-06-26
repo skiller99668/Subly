@@ -226,7 +226,7 @@ export default function ListingsListView({
   onSelect,
   sidebarOpen = false,
 }: ListingsListViewProps) {
-  const [layout, setLayout] = useState<Layout>('grid')
+  const [layout, setLayout] = useState<Layout>('list')
 
   // Restore the saved layout after mount (reading storage during render would
   // risk a hydration mismatch).
