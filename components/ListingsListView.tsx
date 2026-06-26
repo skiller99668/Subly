@@ -267,12 +267,16 @@ export default function ListingsListView({
   }
 
   return (
-    <div
-      className={`fixed bottom-0 left-0 right-0 top-16 z-40 overflow-y-auto bg-slate-50 transition-[left] duration-200 motion-reduce:transition-none ${
-        sidebarOpen ? 'sm:left-96' : ''
-      }`}
-    >
-      <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6">
+    <div className="fixed inset-x-0 bottom-0 top-16 z-40 bg-slate-50">
+      {/* Solid background above fills the whole map area, so the map never
+          shows through. Only the scroll area below shifts to clear the
+          Filters sidebar — the vacated strip stays blank, not see-through. */}
+      <div
+        className={`h-full overflow-y-auto transition-[padding] duration-200 motion-reduce:transition-none ${
+          sidebarOpen ? 'sm:pl-96' : ''
+        }`}
+      >
+        <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6">
         {/* Header: count + layout toggle */}
         <div className="mb-4 flex items-center justify-between gap-3">
           <h1 className="text-lg font-semibold tracking-tight text-slate-900">
@@ -319,6 +323,7 @@ export default function ListingsListView({
             ))}
           </div>
         )}
+        </div>
       </div>
     </div>
   )
