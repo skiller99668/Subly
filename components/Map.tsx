@@ -135,6 +135,10 @@ export default function MapComponent() {
     })
   }, [areaSearch, listings, appliedFilters])
 
+  // What the List view shows: when a place is searched, scope to that area
+  // (mirroring the map's sidebar); otherwise show all visible listings.
+  const listForView = areaSearch ? areaListings : sortedVisible
+
   // GeoJSON circle for the proximity filter, drawn on the map when active.
   const filterCircle = useMemo(
     () =>
@@ -602,11 +606,16 @@ export default function MapComponent() {
 
       <ListingsListView
         open={listView}
-        listings={sortedVisible}
+        listings={listForView}
         favorites={favorites}
         onToggleFavorite={toggleFavorite}
         onSelect={(listing) => setDetailListing(listing)}
         sidebarOpen={filtersOpen}
+        areaName={areaSearch?.name ?? null}
+        onClearArea={() => {
+          setAreaSearch(null)
+          setSearchedPin(null)
+        }}
       />
 
       <MyListingsPanel
@@ -637,15 +646,19 @@ export default function MapComponent() {
         listing={editingListing}
       />
 
-      <AreaListingsPanel
-        location={areaSearch}
-        listings={areaListings}
-        onClose={() => {
-          setAreaSearch(null)
-          setSearchedPin(null)
-        }}
-        onSelect={(listing) => setDetailListing(listing)}
-      />
+      {/* The nearby-leases sidebar is map-view only — in list view the main
+          list is already scoped to the searched area instead. */}
+      {!listView && (
+        <AreaListingsPanel
+          location={areaSearch}
+          listings={areaListings}
+          onClose={() => {
+            setAreaSearch(null)
+            setSearchedPin(null)
+          }}
+          onSelect={(listing) => setDetailListing(listing)}
+        />
+      )}
 
       <LocationListingsPanel
         group={selectedGroup}

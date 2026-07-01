@@ -19,6 +19,10 @@ interface ListingsListViewProps {
   // When the left Filters sidebar is open, shrink so its content stays visible
   // beside the sidebar (≥sm) instead of hiding behind it.
   sidebarOpen?: boolean
+  // When a place has been searched, the list is scoped to that area: the header
+  // names it and offers a way back to all listings. Null = showing everything.
+  areaName?: string | null
+  onClearArea?: () => void
 }
 
 const LAYOUT_KEY = 'subly.listLayout'
@@ -225,6 +229,8 @@ export default function ListingsListView({
   onToggleFavorite,
   onSelect,
   sidebarOpen = false,
+  areaName = null,
+  onClearArea,
 }: ListingsListViewProps) {
   const [layout, setLayout] = useState<Layout>('list')
 
@@ -277,12 +283,33 @@ export default function ListingsListView({
         }`}
       >
         <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6">
-        {/* Header: count + layout toggle */}
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h1 className="text-lg font-semibold tracking-tight text-slate-900">
-            {listings.length} {listings.length === 1 ? 'sublease' : 'subleases'}
-          </h1>
-          <div className="flex items-center gap-0.5 rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm">
+        {/* Header: count (scoped to the searched area when present) + toggle */}
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-semibold tracking-tight text-slate-900">
+              {listings.length}{' '}
+              {areaName
+                ? listings.length === 1
+                  ? 'lease'
+                  : 'leases'
+                : listings.length === 1
+                ? 'sublease'
+                : 'subleases'}
+              {areaName && (
+                <span className="font-normal text-slate-500"> in {areaName}</span>
+              )}
+            </h1>
+            {areaName && onClearArea && (
+              <button
+                type="button"
+                onClick={onClearArea}
+                className="mt-0.5 text-xs font-medium text-blue-600 transition-colors hover:text-blue-700"
+              >
+                Clear area · show all listings
+              </button>
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm">
             {toggleBtn('grid', LayoutGrid, 'Grid view')}
             {toggleBtn('list', LayoutList, 'List view')}
           </div>
@@ -293,9 +320,13 @@ export default function ListingsListView({
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
               <MapPin size={22} />
             </div>
-            <p className="font-medium text-slate-700">No subleases match your filters</p>
+            <p className="font-medium text-slate-700">
+              {areaName ? `No leases in ${areaName}` : 'No subleases match your filters'}
+            </p>
             <p className="mt-1 text-sm text-slate-400">
-              Try clearing a filter or two, or search a different area.
+              {areaName
+                ? 'Nothing here yet — try a wider area, or adjust your filters.'
+                : 'Try clearing a filter or two, or search a different area.'}
             </p>
           </div>
         ) : layout === 'grid' ? (
