@@ -22,7 +22,6 @@ import {
   MessagesSquare,
   Plus,
   BarChart3,
-  Bell,
   MapIcon,
   List,
   X,
@@ -35,6 +34,7 @@ import {
   LogOut,
   UserCircle,
 } from 'lucide-react'
+import NotificationsMenu from '@/components/NotificationsMenu'
 
 interface MenuState {
   searchOpen: boolean
@@ -195,9 +195,8 @@ export default function TopMenu({
     onFiltersOpenChange?.(menu.filtersOpen)
   }, [menu.filtersOpen, onFiltersOpenChange])
 
-  // Placeholder counters until compare/messages/notifications are wired up.
+  // Placeholder counter until the compare feature is built.
   const [compareCount] = useState(0)
-  const [notifications] = useState(2)
 
   // Debounced Mapbox geocoding for the "find subleases in <place>" search.
   useEffect(() => {
@@ -860,45 +859,16 @@ export default function TopMenu({
           {/* Right Side Menu Items */}
           <div className="flex items-center gap-2">
             {/* Notifications Bell */}
-            <div className="relative">
-              <button
-                onClick={() => toggleMenu('notificationsOpen')}
-                className="relative flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
-                title="Notifications"
-              >
-                <Bell size={18} />
-                {notifications > 0 && (
-                  <span className="absolute right-1.5 top-1.5 flex h-2 w-2 rounded-full bg-blue-500 ring-2 ring-white" />
-                )}
-              </button>
-              {menu.notificationsOpen && (
-                <div className="absolute top-12 right-0 w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
-                  <div className="border-b border-slate-100 px-4 py-3">
-                    <h3 className="text-sm font-semibold text-slate-900">Notifications</h3>
-                  </div>
-                  <div className="max-h-64 overflow-y-auto py-1.5">
-                    <div className="flex gap-2.5 px-4 py-2.5 transition-colors hover:bg-slate-50">
-                      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600">
-                        <Bell className="h-3.5 w-3.5" />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-800">New matching listing</p>
-                        <p className="text-xs text-slate-500">A room near campus was posted 1h ago</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2.5 px-4 py-2.5 transition-colors hover:bg-slate-50">
-                      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600">
-                        <MessagesSquare className="h-3.5 w-3.5" />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-800">Host responded</p>
-                        <p className="text-xs text-slate-500">Reply to your inquiry about a listing</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+            <NotificationsMenu
+              open={menu.notificationsOpen}
+              onOpenChange={(next) =>
+                next
+                  ? // Route through toggleMenu so the other dropdowns close.
+                    toggleMenu('notificationsOpen')
+                  : setMenu((prev) => ({ ...prev, notificationsOpen: false }))
+              }
+              onOpenMessages={onMessages}
+            />
 
             {/* Messages */}
             <button

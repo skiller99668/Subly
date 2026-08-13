@@ -3,55 +3,44 @@ import fs from "fs"
 import path from "path"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+// The schema creates tables, policies and triggers, so it needs the service
+// role key — the anon key cannot run DDL.
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error("Missing Supabase environment variables")
+  console.error(
+    "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in the environment"
+  )
   process.exit(1)
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
+// database.sql is applied as a single script rather than split on semicolons:
+// the notification triggers contain dollar-quoted function bodies whose own
+// semicolons would otherwise be torn apart. Sending it whole also means it
+// applies atomically — no half-migrated database to reason about.
 async function setupDatabase() {
-  try {
-    console.log("Reading database schema...")
-    const sqlPath = path.join(process.cwd(), "database.sql")
-    const sql = fs.readFileSync(sqlPath, "utf-8")
+  const sqlPath = path.join(process.cwd(), "database.sql")
+  const sql = fs.readFileSync(sqlPath, "utf-8")
 
-    // Split SQL into individual statements and filter empty ones
-    const statements = sql
-      .split(";")
-      .map((stmt) => stmt.trim())
-      .filter((stmt) => stmt.length > 0 && !stmt.startsWith("--"))
+  console.log(`Applying ${path.basename(sqlPath)}...`)
 
-    console.log(`Found ${statements.length} SQL statements`)
+  const { error } = await supabase.rpc("exec_sql", { sql })
 
-    // Execute each statement
-    for (let i = 0; i < statements.length; i++) {
-      const statement = statements[i] + ";"
-      console.log(`Executing statement ${i + 1}/${statements.length}...`)
-
-      try {
-        const { error } = await supabase.rpc("exec_sql", { sql: statement }, { head: false })
-
-        if (error) {
-          console.warn(`Warning on statement ${i + 1}: ${error.message}`)
-        } else {
-          console.log(`✓ Statement ${i + 1} executed`)
-        }
-      } catch (err: any) {
-        // RPC might not exist, try alternative method
-        console.log(`Attempting alternative method for statement ${i + 1}...`)
-      }
-    }
-
-    console.log("\n✅ Database setup complete!")
-    console.log("Note: Some statements may have been skipped if RPC is not available.")
-    console.log("Please ensure all tables are created in Supabase dashboard SQL editor.")
-  } catch (error) {
-    console.error("Database setup error:", error)
+  if (error) {
+    console.error(`\n❌ Could not apply the schema: ${error.message}`)
+    console.error(
+      "\nThis script needs an `exec_sql(sql text)` function in your project," +
+        "\nwhich Supabase does not provide by default. If you don't have one," +
+        "\npaste database.sql into the Supabase SQL editor instead:" +
+        "\n  Dashboard → SQL Editor → New query → paste → Run" +
+        "\nThe file is idempotent, so running it again is safe."
+    )
     process.exit(1)
   }
+
+  console.log("\n✅ Database setup complete!")
 }
 
 setupDatabase()

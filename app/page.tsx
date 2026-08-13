@@ -28,6 +28,7 @@ import { LISTING_TAGS } from '@/utils/listingTags'
 import { requestAndSaveLocation } from '@/utils/location'
 import { useAuth } from '@/app/providers'
 import MessagesPanel from '@/components/MessagesPanel'
+import NotificationsMenu from '@/components/NotificationsMenu'
 
 const STEPS = [
   {
@@ -84,6 +85,7 @@ export default function LandingPage() {
   const { user, signOut } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [messagesOpen, setMessagesOpen] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [query, setQuery] = useState('')
 
   const displayName = user
@@ -127,7 +129,11 @@ export default function LandingPage() {
           <div className="hidden items-center gap-2 md:flex">
             {user ? (
               <>
-                <NotificationsMenu />
+                <NotificationsMenu
+                  open={notificationsOpen}
+                  onOpenChange={setNotificationsOpen}
+                  onOpenMessages={() => setMessagesOpen(true)}
+                />
                 <button
                   onClick={() => setMessagesOpen(true)}
                   title="Messages"
@@ -695,80 +701,5 @@ function AccountMenu() {
   )
 }
 
-// Placeholder notifications shown in the landing header — mirrors the map's
-// bell so the signed-in experience is consistent across both. Swap the static
-// items for a real feed (e.g. the `notifications` table) when it's wired up.
-const SAMPLE_NOTIFICATIONS = [
-  { title: 'New matching listing', detail: 'A room near campus was just posted' },
-  { title: 'New message', detail: 'A host replied to your inquiry' },
-]
-
-function NotificationsMenu() {
-  const { user } = useAuth()
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onClick)
-    return () => document.removeEventListener('mousedown', onClick)
-  }, [open])
-
-  if (!user) return null
-
-  const count = SAMPLE_NOTIFICATIONS.length
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        title="Notifications"
-        className="relative flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
-      >
-        <Bell className="h-[18px] w-[18px]" />
-        {count > 0 && (
-          <span className="absolute right-1 top-1 flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full rounded-full bg-blue-500" />
-          </span>
-        )}
-      </button>
-
-      {open && (
-        <div className="absolute right-0 top-12 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white py-1.5 shadow-lg">
-          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
-            <p className="text-sm font-semibold text-slate-900">Notifications</p>
-            <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
-              {count} new
-            </span>
-          </div>
-          {SAMPLE_NOTIFICATIONS.map((n) => (
-            <div
-              key={n.title}
-              className="flex gap-2.5 px-4 py-2.5 transition-colors hover:bg-slate-50"
-            >
-              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600">
-                <Bell className="h-3.5 w-3.5" />
-              </span>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-slate-800">{n.title}</p>
-                <p className="truncate text-xs text-slate-500">{n.detail}</p>
-              </div>
-            </div>
-          ))}
-          <div className="border-t border-slate-100 px-4 pb-1 pt-2">
-            <Link
-              href="/map"
-              onClick={() => setOpen(false)}
-              className="block py-1 text-sm font-medium text-blue-600 hover:text-blue-700"
-            >
-              Open the map →
-            </Link>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
+// The notifications bell lives in components/NotificationsMenu.tsx and is
+// shared with the map's top menu, so both headers show the same real feed.

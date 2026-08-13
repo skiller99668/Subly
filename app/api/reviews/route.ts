@@ -76,14 +76,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "You can't review yourself" }, { status: 400 })
     }
 
+    // One review per author per subject (reviews_author_subject_key), so a
+    // re-submit edits the existing review rather than stacking another one —
+    // which is what the UI's "edit your review" flow does.
     const { data, error } = await supabase
       .from("reviews")
-      .insert({
-        subject_id,
-        author_id: user.id,
-        rating: numericRating,
-        comment: typeof comment === "string" && comment.trim() ? comment.trim() : null,
-      })
+      .upsert(
+        {
+          subject_id,
+          author_id: user.id,
+          rating: numericRating,
+          comment:
+            typeof comment === "string" && comment.trim() ? comment.trim() : null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "author_id,subject_id" }
+      )
       .select(REVIEW_SELECT)
       .single()
 
